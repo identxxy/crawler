@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<robot name="crawler"
+    xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="leg" params="suffix">
+        <transmission name="tran1_${suffix}">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="joint1_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            </joint>
+            <actuator name="act1_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+                <mechanicalReduction>1</mechanicalReduction>
+            </actuator>
+        </transmission>
+
+        <link name="leg1_${suffix}">
+            <inertial>
+                <origin xyz="${L_up_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <mass value="${M_body}" />
+                <inertia ixx="${M_up_leg * (1/12 * L_up_leg * L_up_leg + 1/4 * R_up_leg * R_up_leg)}" ixy="0" ixz="0" iyy="${M_up_leg * (1/12 * L_up_leg * L_up_leg + 1/4 * R_up_leg * R_up_leg)}" iyz="0" izz="${1/2 * M_up_leg * R_up_leg * R_up_leg}" />
+            </inertial>
+            <visual>
+                <origin xyz="${L_up_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_up_leg}" radius="${R_up_leg}"/>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="${L_up_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_up_leg}" radius="${R_up_leg}"/>
+                </geometry>
+            </collision>
+        </link>
+        <gazebo reference="leg1_${suffix}">
+            <material>Gazebo/Grey</material>
+        </gazebo>
+
+        <joint name="joint2_${suffix}" type="revolute">
+            <parent link="leg1_${suffix}"/>
+            <child link="leg2_${suffix}"/>
+            <origin xyz="${L_up_leg} 0 0" rpy="${-pi/2} 0 0"/>
+            <xacro:joint2_property/>
+        </joint>
+
+        <transmission name="tran2_${suffix}">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="joint2_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            </joint>
+            <actuator name="act2_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+                <mechanicalReduction>1</mechanicalReduction>
+            </actuator>
+        </transmission>
+
+        <link name="leg2_${suffix}">
+            <inertial>
+                <origin xyz="${L_down_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <mass value="${M_body}" />
+                <inertia ixx="${M_down_leg * (1/12 * L_down_leg * L_down_leg + 1/4 * R_down_leg * R_down_leg)}" ixy="0" ixz="0" iyy="${M_down_leg * (1/12 * L_down_leg * L_down_leg + 1/4 * R_down_leg * R_down_leg)}" iyz="0" izz="${1/2 * M_down_leg * R_down_leg * R_down_leg}" />
+            </inertial>
+            <visual>
+                <origin xyz="${L_down_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_down_leg}" radius="${R_down_leg}"/>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="${L_down_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_down_leg}" radius="${R_down_leg}"/>
+                </geometry>
+            </collision>
+        </link>
+        <gazebo reference="leg2_${suffix}">
+            <material>Gazebo/Orange</material>
+        </gazebo>
+
+        <joint name="end_joint_${suffix}" type="fixed">
+            <parent link="leg2_${suffix}"/>
+            <child link="foot_${suffix}"/>
+            <origin xyz="${L_down_leg + R_foot} 0 0" rpy="0 0 0"/>
+        </joint>
+
+        <link name="foot_${suffix}">
+            <inertial>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <mass value="${M_body}" />
+                <inertia ixx="${2/5 * M_foot * R_foot * R_foot}" ixy="0" ixz="0" iyy="${2/5 * M_foot * R_foot * R_foot}" iyz="0" izz="${2/5 * M_foot * R_foot * R_foot}" />
+            </inertial>
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <sphere radius="${R_foot}"/>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <sphere radius="${R_foot}"/>
+                </geometry>
+            </collision>
+        </link>
+        <gazebo reference="foot_${suffix}">
+            <collision>
+                <surface>
+                    <contact>
+                        <ode>
+                            <kp>5e8</kp>
+                            <kd>0.5</kd>
+                            <min_depth>0.01</min_depth>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+            <material>Gazebo/Black</material>
+        </gazebo>
+
+    </xacro:macro>
+</robot>

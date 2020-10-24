@@ -1,0 +1,39 @@
+crawler:
+  # Publish all joint states -----------------------------------
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 10  
+  
+  # Position Controllers ---------------------------------------
+  joint1_F_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint1_F
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}
+  joint1_B_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint1_B
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}
+  joint1_L_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint1_L
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}
+  joint1_R_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint1_R
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}
+  joint2_F_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint2_F
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}
+  joint2_B_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint2_B
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}
+  joint2_L_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint2_L
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}
+  joint2_R_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint2_R
+    pid: {p: 10.0, i: 0.0, d: 0.0, i_clamp_min: -0.0, i_clamp_max: 0.0}

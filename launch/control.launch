@@ -1,0 +1,26 @@
+<launch>
+
+  <!-- Load joint controller configurations from YAML file to parameter server -->
+  <arg name="control_type"/>
+  <rosparam file="$(find crawler)/config/$(arg control_type)_control.yaml" command="load"/>
+
+  <!-- load the controllers -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+	output="screen" ns="/crawler" args="joint_state_controller
+            joint1_B_controller
+            joint1_F_controller
+            joint1_L_controller
+            joint1_R_controller
+            joint2_B_controller
+            joint2_F_controller
+            joint2_L_controller
+            joint2_R_controller
+            "/>
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+	respawn="false" output="screen">
+    <remap from="/joint_states" to="/crawler/joint_states" />
+  </node>
+
+</launch>

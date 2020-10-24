@@ -1,0 +1,4 @@
+.*
+training_results/
+*/__pycache__
+!.gitignore

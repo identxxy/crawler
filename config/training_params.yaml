@@ -1,0 +1,22 @@
+crawler: #namespace
+
+    n_actions: 3
+    
+    #environment variables
+    stop_pos: 1.05 # pi/3
+    
+    running_step: 0.1 # amount of time the control will be executed
+    effort_step: 100     # increment in position for each command
+    
+    #qlearn parameters
+    alpha: 0.5
+    gamma: 0.9
+    epsilon: 0.1
+    epsilon_discount: 0.999
+    nepisodes: 10
+    nsteps: 1000
+    number_splits: 10 #set to change the number of state splits for the continuous problem and also the number of env_variable splits
+
+    init_pos: 0.0 # Position in which the base will start
+    wait_time: 0.1 # Time to wait in the reset phases
+    
