@@ -3,7 +3,8 @@ crawler: #namespace
     n_actions: 3
     
     #environment variables
-    stop_pos: 1.05 # pi/3
+    stop_z_pos: 0.3 # pi/3
+    stop_z_cnt: 5 # pi/3
     
     running_step: 0.1 # amount of time the control will be executed
     effort_step: 100     # increment in position for each command

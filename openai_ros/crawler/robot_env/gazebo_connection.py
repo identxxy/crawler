@@ -31,16 +31,16 @@ class GazeboConnection():
         self.pauseSim()
 
     def pauseSim(self):
-        rospy.logdebug("PAUSING service found...")
+        # rospy.logdebug("PAUSING service found...")
         paused_done = False
         counter = 0
         while not paused_done and not rospy.is_shutdown():
             if counter < self._max_retry:
                 try:
-                    rospy.logdebug("PAUSING service calling...")
+                    # rospy.logdebug("PAUSING service calling...")
                     self.pause()
                     paused_done = True
-                    rospy.logdebug("PAUSING service calling...DONE")
+                    # rospy.logdebug("PAUSING service calling...DONE")
                 except rospy.ServiceException as e:
                     counter += 1
                     rospy.logerr("/gazebo/pause_physics service call failed")
@@ -49,19 +49,19 @@ class GazeboConnection():
                 rospy.logerr(error_message)
                 assert False, error_message
 
-        rospy.logdebug("PAUSING FINISH")
+        # rospy.logdebug("PAUSING FINISH")
 
     def unpauseSim(self):
-        rospy.logdebug("UNPAUSING service found...")
+        # rospy.logdebug("UNPAUSING service found...")
         unpaused_done = False
         counter = 0
         while not unpaused_done and not rospy.is_shutdown():
             if counter < self._max_retry:
                 try:
-                    rospy.logdebug("UNPAUSING service calling...")
+                    # rospy.logdebug("UNPAUSING service calling...")
                     self.unpause()
                     unpaused_done = True
-                    rospy.logdebug("UNPAUSING service calling...DONE")
+                    # rospy.logdebug("UNPAUSING service calling...DONE")
                 except rospy.ServiceException as e:
                     counter += 1
                     rospy.logerr("/gazebo/unpause_physics service call failed...Retrying "+str(counter))
@@ -70,7 +70,7 @@ class GazeboConnection():
                 rospy.logerr(error_message)
                 assert False, error_message
 
-        rospy.logdebug("UNPAUSING FiNISH")
+        # rospy.logdebug("UNPAUSING FiNISH")
 
 
     def resetSim(self):

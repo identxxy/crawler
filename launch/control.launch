@@ -15,6 +15,14 @@
             joint2_F_controller
             joint2_L_controller
             joint2_R_controller
+            joint3_B_controller
+            joint3_F_controller
+            joint3_L_controller
+            joint3_R_controller
+            joint4_B_controller
+            joint4_F_controller
+            joint4_L_controller
+            joint4_R_controller
             "/>
 
   <!-- convert joint states to TF transforms for rviz, etc -->

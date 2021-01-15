@@ -7,8 +7,10 @@
     <xacro:property name="M_body" value="5"/>
 
     <xacro:property name="R_up_leg" value="0.05"/>
-    <xacro:property name="L_up_leg" value="0.5"/>
-    <xacro:property name="M_up_leg" value="2"/>
+    <xacro:property name="L_up_leg" value="0.40"/>
+    <xacro:property name="L_up_con_leg" value="0.05"/>
+    <xacro:property name="M_up_leg" value="1.5"/>
+    <xacro:property name="M_up_con_leg" value="0.25"/>
 
     <xacro:property name="R_down_leg" value="0.025"/>
     <xacro:property name="L_down_leg" value="0.5"/>
@@ -24,6 +26,18 @@
     </xacro:macro>
 
     <xacro:macro name="joint2_property">
+        <axis xyz="0 0 1"/>
+        <dynamics damping="0.7" friction="0.0"/>
+        <limit effort="100.0" velocity="10.0" lower="0.0" upper="${pi*5/6}"/>
+    </xacro:macro>
+
+    <xacro:macro name="joint3_property">
+        <axis xyz="1 0 0"/>
+        <dynamics damping="0.7" friction="0.0"/>
+        <limit effort="100.0" velocity="10.0" lower="${-pi/2}" upper="${pi/2}"/>
+    </xacro:macro>
+
+    <xacro:macro name="joint4_property">
         <axis xyz="0 0 1"/>
         <dynamics damping="0.7" friction="0.0"/>
         <limit effort="100.0" velocity="10.0" lower="0.0" upper="${pi*5/6}"/>

@@ -6,6 +6,7 @@ from gym.utils import seeding
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
 from rosgraph_msgs.msg import Clock
+from gazebo_msgs.msg import ModelStates
 
 class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
     """Superclass for all Robot environments.
@@ -26,7 +27,15 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
             'joint2_B_controller',
             'joint2_F_controller',
             'joint2_L_controller',
-            'joint2_R_controller'
+            'joint2_R_controller',
+            'joint3_B_controller',
+            'joint3_F_controller',
+            'joint3_L_controller',
+            'joint3_R_controller',
+            'joint4_B_controller',
+            'joint4_F_controller',
+            'joint4_L_controller',
+            'joint4_R_controller'
         ]
 
         # Internal Vars
@@ -35,8 +44,12 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
         for n in self.controllers_list[1:]:
             self.publisher_list.append(
                 rospy.Publisher(self.ns + '/' + n + '/command', Float64, queue_size=1))
-        self.subscriber = rospy.Subscriber(self.ns + '/joint_states', JointState, self.joints_callback)
+        self.joint_subscriber = rospy.Subscriber(self.ns + '/joint_states', JointState, self.joints_callback)
+        self.global_subscriber = rospy.Subscriber('/gazebo/model_states', ModelStates, self.model_callback)
         self.joints = None
+        self.global_pos = None
+        self.global_vel = None
+        self.model_index = None
 
         reset_controls_bool = True
         
@@ -45,6 +58,12 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
         super(CrawlerRobotEnv, self).__init__(controllers_list=self.controllers_list,
                                                 robot_name_space=self.ns,
                                                 reset_controls=reset_controls_bool)
+        rospy.logdebug("END init CrawlerRobotEnv")
+
+    def model_callback(self, data):
+        if self.model_index:
+            self.global_pos = data.pose[self.model_index]
+            self.global_vel = data.twist[self.model_index]
 
     def joints_callback(self, data):
         self.joints = data
@@ -65,6 +84,11 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
             except:
                 rospy.logerr(
                     "Current /joint_states not ready yet.\n Do you spawn the robot and launch ros_control?")
+            try:
+                self.model_index = rospy.wait_for_message('/gazebo/model_states', ModelStates, 3).name.index(self.ns[1:])
+            except rospy.exceptions.ROSException:
+                rospy.logerr("Robot model does not exist.")
+
         # rospy.logdebug("ALL SYSTEMS READY")
         return True
 

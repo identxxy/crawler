@@ -16,6 +16,47 @@
 
         <link name="leg1_${suffix}">
             <inertial>
+                <origin xyz="${L_up_con_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <mass value="${M_up_con_leg}" />
+                <inertia ixx="${M_up_con_leg * (1/12 * L_up_con_leg * L_up_con_leg + 1/4 * R_up_leg * R_up_leg)}" ixy="0" ixz="0" iyy="${M_up_con_leg * (1/12 * L_up_con_leg * L_up_con_leg + 1/4 * R_up_leg * R_up_leg)}" iyz="0" izz="${1/2 * M_up_con_leg * R_up_leg * R_up_leg}" />
+            </inertial>
+            <visual>
+                <origin xyz="${L_up_con_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_up_con_leg}" radius="${R_up_leg}"/>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="${L_up_con_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_up_con_leg}" radius="${R_up_leg}"/>
+                </geometry>
+            </collision>
+        </link>
+        <gazebo reference="leg1_${suffix}">
+            <material>Gazebo/Grey</material>
+        </gazebo>
+
+        <joint name="joint2_${suffix}" type="revolute">
+            <parent link="leg1_${suffix}"/>
+            <child link="leg2_${suffix}"/>
+            <origin xyz="${L_up_con_leg} 0 0" rpy="${-pi/2} 0 0"/>
+            <xacro:joint2_property/>
+        </joint>
+
+        <transmission name="tran2_${suffix}">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="joint2_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            </joint>
+            <actuator name="act2_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+                <mechanicalReduction>1</mechanicalReduction>
+            </actuator>
+        </transmission>
+
+        <link name="leg2_${suffix}">
+            <inertial>
                 <origin xyz="${L_up_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
                 <mass value="${M_body}" />
                 <inertia ixx="${M_up_leg * (1/12 * L_up_leg * L_up_leg + 1/4 * R_up_leg * R_up_leg)}" ixy="0" ixz="0" iyy="${M_up_leg * (1/12 * L_up_leg * L_up_leg + 1/4 * R_up_leg * R_up_leg)}" iyz="0" izz="${1/2 * M_up_leg * R_up_leg * R_up_leg}" />
@@ -33,29 +74,71 @@
                 </geometry>
             </collision>
         </link>
-        <gazebo reference="leg1_${suffix}">
+        <gazebo reference="leg2_${suffix}">
             <material>Gazebo/Grey</material>
         </gazebo>
 
-        <joint name="joint2_${suffix}" type="revolute">
-            <parent link="leg1_${suffix}"/>
-            <child link="leg2_${suffix}"/>
-            <origin xyz="${L_up_leg} 0 0" rpy="${-pi/2} 0 0"/>
-            <xacro:joint2_property/>
+        <joint name="joint3_${suffix}" type="revolute">
+            <parent link="leg2_${suffix}"/>
+            <child link="leg3_${suffix}"/>
+            <origin xyz="${L_up_leg} 0 0" rpy="0 0 0"/>
+            <xacro:joint3_property/>
         </joint>
 
-        <transmission name="tran2_${suffix}">
+        <transmission name="tran3_${suffix}">
             <type>transmission_interface/SimpleTransmission</type>
-            <joint name="joint2_${suffix}">
+            <joint name="joint3_${suffix}">
                 <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
             </joint>
-            <actuator name="act2_${suffix}">
+            <actuator name="act3_${suffix}">
                 <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
                 <mechanicalReduction>1</mechanicalReduction>
             </actuator>
         </transmission>
 
-        <link name="leg2_${suffix}">
+        <link name="leg3_${suffix}">
+            <inertial>
+                <origin xyz="${L_up_con_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <mass value="${M_up_con_leg}" />
+                <inertia ixx="${M_up_con_leg * (1/12 * L_up_con_leg * L_up_con_leg + 1/4 * R_up_leg * R_up_leg)}" ixy="0" ixz="0" iyy="${M_up_con_leg * (1/12 * L_up_con_leg * L_up_con_leg + 1/4 * R_up_leg * R_up_leg)}" iyz="0" izz="${1/2 * M_up_con_leg * R_up_leg * R_up_leg}" />
+            </inertial>
+            <visual>
+                <origin xyz="${L_up_con_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_up_con_leg}" radius="${R_up_leg}"/>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="${L_up_con_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <geometry>
+                    <cylinder length="${L_up_con_leg}" radius="${R_up_leg}"/>
+                </geometry>
+            </collision>
+        </link>
+        <gazebo reference="leg3_${suffix}">
+            <material>Gazebo/Grey</material>
+        </gazebo>
+
+        <joint name="joint4_${suffix}" type="revolute">
+            <parent link="leg3_${suffix}"/>
+            <child link="leg4_${suffix}"/>
+            <origin xyz="${L_up_con_leg} 0 0" rpy="0 0 0"/>
+            <xacro:joint4_property/>
+        </joint>
+
+        <transmission name="tran4_${suffix}">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="joint4_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            </joint>
+            <actuator name="act4_${suffix}">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+                <mechanicalReduction>1</mechanicalReduction>
+            </actuator>
+        </transmission>
+
+
+        <link name="leg4_${suffix}">
             <inertial>
                 <origin xyz="${L_down_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
                 <mass value="${M_body}" />
@@ -74,12 +157,12 @@
                 </geometry>
             </collision>
         </link>
-        <gazebo reference="leg2_${suffix}">
+        <gazebo reference="leg4_${suffix}">
             <material>Gazebo/Orange</material>
         </gazebo>
 
         <joint name="end_joint_${suffix}" type="fixed">
-            <parent link="leg2_${suffix}"/>
+            <parent link="leg4_${suffix}"/>
             <child link="foot_${suffix}"/>
             <origin xyz="${L_down_leg + R_foot} 0 0" rpy="0 0 0"/>
         </joint>

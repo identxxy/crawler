@@ -38,9 +38,12 @@ class TestTaskEnv(crawler_env.CrawlerRobotEnv):
         self.observation_space = spaces.Box(low, high)
         
         # Variables that we retrieve through the param server, loded when launch training launch.
-        self.stop_pos = rospy.get_param('/crawler/stop_pos')
+        self.stop_z_pos = rospy.get_param('/crawler/stop_z_pos')
+        self.stop_z_cnt = rospy.get_param('/crawler/stop_z_cnt')
         self.running_step = rospy.get_param('/crawler/running_step')
         self.effort_step = rospy.get_param('/crawler/effort_step')
+
+        rospy.logdebug("END init TestTaskEnv")
 
     def _set_init_pose(self):
         """Sets the Robot in its init pose
@@ -54,6 +57,7 @@ class TestTaskEnv(crawler_env.CrawlerRobotEnv):
         :return:
         """
         self.cmd = np.zeros(len(self.publisher_list))
+        self.done_cnt = 0
 
 
     def _set_action(self, action):
@@ -84,14 +88,18 @@ class TestTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Decide if episode is done based on the observations
         """
-        done = (observations > self.stop_pos).all()
-        return done
+        done = self.global_pos.position.z > self.stop_z_pos
+        if done:
+            self.done_cnt = self.done_cnt + 1
+        else:
+            self.done_cnt = 0
+        return self.done_cnt > self.stop_z_cnt
 
     def _compute_reward(self, observations, done):
         """
         Return the reward based on the observations given
         """
-        reward = sum(observations > self.stop_pos)
+        reward = self.global_pos.position.z > self.stop_z_pos
         return reward
         
     # Internal TaskEnv Methods

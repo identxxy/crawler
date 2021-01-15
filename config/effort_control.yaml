@@ -29,3 +29,27 @@ crawler:
   joint2_R_controller:
     type: effort_controllers/JointEffortController
     joint: joint2_R
+  joint3_F_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint3_F
+  joint3_B_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint3_B
+  joint3_L_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint3_L
+  joint3_R_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint3_R
+  joint4_F_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint4_F
+  joint4_B_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint4_B
+  joint4_L_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint4_L
+  joint4_R_controller:
+    type: effort_controllers/JointEffortController
+    joint: joint4_R
