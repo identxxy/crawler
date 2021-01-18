@@ -20,29 +20,25 @@ def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_
         rosparam.upload_params(ns,params)
 
 
-class TestTaskEnv(crawler_env.CrawlerRobotEnv):
+class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
     def __init__(self):
         # Load all the params first
-        LoadYamlFileParamsTest("crawler", "config", "test_qlearn_param.yaml")
+        LoadYamlFileParamsTest("crawler", "config", "standup_param.yaml")
+        # Variables that we retrieve through the param server, loded when launch training launch.
+        self.reward_height_b = rospy.get_param('/crawler/reward_height_b')
+        self.reward_height_k = rospy.get_param('/crawler/reward_height_k')
+        self.effort_penalty = rospy.get_param('/crawler/effort_penalty')
+        self.effort_scale = rospy.get_param('/crawler/effort_scale')
+        self.epoch_steps = rospy.get_param('/crawler/epoch_steps')
+        self.running_step = rospy.get_param('/crawler/running_step')
         # Construct the RobotEnv so we know the dimension of cmd
-        super(TestTaskEnv, self).__init__()
+        super(StandupTaskEnv, self).__init__()
         # Only variable needed to be set here
-        number_actions = rospy.get_param('/crawler/n_actions')
-        self.action_space = spaces.Discrete(number_actions)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16, 1), dtype=np.float32)
         self._init_env_variables()
         
-        # This is the most common case of Box observation type
-        high = np.array([ np.pi * 5/6, np.pi *5/6])
-        low = np.array([0.0, 0.0])
-            
-        self.observation_space = spaces.Box(low, high)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(61, 1), dtype=np.float32)
         
-        # Variables that we retrieve through the param server, loded when launch training launch.
-        self.stop_z_pos = rospy.get_param('/crawler/stop_z_pos')
-        self.stop_z_cnt = rospy.get_param('/crawler/stop_z_cnt')
-        self.running_step = rospy.get_param('/crawler/running_step')
-        self.effort_step = rospy.get_param('/crawler/effort_step')
-
         rospy.logdebug("END init TestTaskEnv")
 
     def _set_init_pose(self):
@@ -57,21 +53,17 @@ class TestTaskEnv(crawler_env.CrawlerRobotEnv):
         :return:
         """
         self.cmd = np.zeros(len(self.publisher_list))
-        self.done_cnt = 0
+        self.steps = 0
 
 
     def _set_action(self, action):
         """
         Move the robot based on the action variable given
         """
-        if action == 0:
-            self.cmd[4:] = 0
-        elif action == 1:
-            self.cmd[4:] = self.effort_step
-        elif action == 2:
-            self.cmd[4:] = - self.effort_step
+        self.cmd = self.effort_scale * action
         self.move_joints(self.cmd)
         rospy.sleep(self.running_step)
+        self.steps += 1
 
     def _get_obs(self):
         """
@@ -80,26 +72,41 @@ class TestTaskEnv(crawler_env.CrawlerRobotEnv):
         MyRobotEnv API DOCS
         :return: observations
         """
-        data = self.obs_joints()
-        obs = data.position[4:]
-        return np.array(obs)
+        joints, global_pos, global_vel = self.obs_joints()
+        return np.concatenate([
+            joints.position,
+            joints.velocity,
+            joints.effort,
+            (
+                global_pos.position.x,
+                global_pos.position.y,
+                global_pos.position.z,
+                global_pos.orientation.w,
+                global_pos.orientation.x,
+                global_pos.orientation.y,
+                global_pos.orientation.z,
+                global_vel.linear.x,
+                global_vel.linear.y,
+                global_vel.linear.z,
+                global_vel.angular.x,
+                global_vel.angular.y,
+                global_vel.angular.z
+            )
+        ])
 
     def _is_done(self, observations):
         """
         Decide if episode is done based on the observations
         """
-        done = self.global_pos.position.z > self.stop_z_pos
-        if done:
-            self.done_cnt = self.done_cnt + 1
-        else:
-            self.done_cnt = 0
-        return self.done_cnt > self.stop_z_cnt
+        done = self.steps > self.epoch_steps
+        return done
 
     def _compute_reward(self, observations, done):
         """
         Return the reward based on the observations given
         """
-        reward = self.global_pos.position.z > self.stop_z_pos
+        reward = (self.global_pos.position.z - self.reward_height_b ) * self.reward_height_k
+        reward -= self.effort_penalty * sum(self.joints.effort)
         return reward
         
     # Internal TaskEnv Methods

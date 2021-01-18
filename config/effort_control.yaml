@@ -2,7 +2,7 @@ crawler:
   # Publish all joint states -----------------------------------
   joint_state_controller:
     type: joint_state_controller/JointStateController
-    publish_rate: 10  
+    publish_rate: 50  
   
   # Effort Controllers ---------------------------------------
   joint1_F_controller:

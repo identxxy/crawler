@@ -3,10 +3,10 @@ import rospy
 import numpy as np
 from gym.utils import seeding
 
-from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
 from rosgraph_msgs.msg import Clock
 from gazebo_msgs.msg import ModelStates
+from sensor_msgs.msg import JointState
 
 class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
     """Superclass for all Robot environments.
@@ -135,4 +135,4 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
             self.publisher_list[i].publish(joint_value)
 
     def obs_joints(self):
-        return self.joints
+        return self.joints, self.global_pos, self.global_vel

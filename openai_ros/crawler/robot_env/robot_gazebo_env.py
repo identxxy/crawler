@@ -36,6 +36,8 @@ class RobotGazeboEnv(gym.Env):
         if self.reset_controls:
             self.controllers_object.reset_controllers()
 
+        self._check_all_systems_ready()
+        self.gazebo.pauseSim()
         rospy.logdebug("END init RobotGazeboEnv")
 
     # Env methods
@@ -100,7 +102,7 @@ class RobotGazeboEnv(gym.Env):
                                     self.cumulated_episode_reward,
                                     self.episode_num
                                     )
-        rospy.loginfo("PUBLISHING REWARD...DONE="+str(self.cumulated_episode_reward)+",EP="+str(self.episode_num))
+        #rospy.loginfo("PUBLISHING REWARD...DONE="+str(self.cumulated_episode_reward)+",EP="+str(self.episode_num))
 
         self.episode_num += 1
         self.cumulated_episode_reward = 0

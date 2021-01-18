@@ -1,13 +1,9 @@
-import rospy
+import rospy 
 from gazebo_msgs.msg import ModelStates
-
-data = None
+from sensor_msgs.msg import JointState
 
 rospy.init_node('test')
-
-def callback(d):
-    global data
-    data = d
-
-sub = rospy.Subscriber('/gazebo/model_states', ModelStates, callback)
-print('end')
+try:
+    msg = rospy.wait_for_message( '/crawler/joint_states', JointState, timeout=10.0)
+except rospy.ROSException:
+    print('f')
