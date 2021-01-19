@@ -14,26 +14,31 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from ACNet import save_checkpoint, load_checkpoint
-import crawler.register_all_env
-import rospy
 
 class ReplayMemory(object):
     def __init__(self, capacity):
         self.capacity = capacity
+        self.load = 0
+        self.batchsize = 0
         self.memory = []
 
     def push(self, events):
-        for event in zip(*events):
-            self.memory.append(event)
-            if len(self.memory)>self.capacity:
-                del self.memory[0]
+        #Events = list(zip(*events))
+        self.memory.append(map(lambda x: torch.cat(x,0), events))
+        self.load += len(events[1])
+        self.batchsize += 1
+        #if len(self.memory)>self.capacity:
+            #del self.memory[0]
 
     def clear(self):
         self.memory = []
+        self.load = 0
+        self.batchsize = 0
 
-    def sample(self, batch_size):
-        samples = zip(*random.sample(self.memory, batch_size))
-        return map(lambda x: torch.cat(x, 0), samples)
+    def pull(self):
+        Memory = list(zip(*self.memory))
+        data = map(lambda x: torch.stack(x,0).permute(1,0,2), Memory)
+        return data
 
 def train(env, model, optimizer, shared_obs_stats, params):
     memory = ReplayMemory(params.num_steps)
@@ -46,8 +51,10 @@ def train(env, model, optimizer, shared_obs_stats, params):
     # horizon loop
     for t in range(params.time_horizon):
         episode_length = 0
-        while(len(memory.memory)<params.num_steps):
+        while(memory.load < params.num_steps):
             states = []
+            h = []
+            c = []
             actions = []
             rewards = []
             values = []
@@ -57,8 +64,8 @@ def train(env, model, optimizer, shared_obs_stats, params):
             av_reward = 0
             cum_reward = 0
             cum_done = 0
-            hx = torch.randn((params.lstmhiddensize, 1))
-            cx = torch.randn((params.lstmhiddensize, 1))
+            hx = torch.zeros((1,params.lstmhiddensize))
+            cx = torch.zeros((1,params.lstmhiddensize))
 
             # n steps loops
             for step in range(params.num_steps):
@@ -66,11 +73,12 @@ def train(env, model, optimizer, shared_obs_stats, params):
                 shared_obs_stats.observes(state)
                 state = shared_obs_stats.normalize(state)
                 states.append(state)
-                mu, sigma_sq, v, hx_, cx_ = model(state, hx, cx)
-                action = (mu + sigma_sq*Variable(torch.randn(mu.size())))
+                mu, sigma, v, hx, cx = model(state, hx, cx)
+                #h.append(hx)
+                #c.append(cx)
+                action = (mu + torch.exp(sigma)*Variable(torch.randn(mu.size())))
                 actions.append(action)
-                log_std = model.log_std
-                log_prob = -0.5 * ((action - mu) / sigma_sq).pow(2) - 0.5 * math.log(2 * math.pi) - log_std
+                log_prob = -0.5 * ((action - mu) / torch.exp(sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - sigma
                 log_prob = log_prob.sum(-1, keepdim=True)
                 logprobs.append(log_prob)
                 values.append(v)
@@ -80,8 +88,6 @@ def train(env, model, optimizer, shared_obs_stats, params):
                 cum_reward += reward
                 # reward = max(min(reward, 1), -1)
                 rewards.append(reward)
-                hx = hx_
-                cx = cx_
 
                 if done:
                     episode += 1
@@ -115,20 +121,33 @@ def train(env, model, optimizer, shared_obs_stats, params):
             memory.push([states, actions, returns, advantages, logprobs])
 
         # epochs
+        batch_states, batch_actions, batch_returns, batch_advantages, batch_logprobs = memory.pull()
+        print(batch_actions.shape)
+        batch_actions = Variable(batch_actions.data, requires_grad=False)
+        batch_states = Variable(batch_states.data, requires_grad=False)
+        batch_returns = Variable(batch_returns.data, requires_grad=False)
+        batch_advantages = Variable(batch_advantages.data, requires_grad=False)
+        batch_logprobs = Variable(batch_logprobs.data, requires_grad=False)
+
         for k in range(params.num_epoch):
-            batch_states, batch_actions, batch_returns, batch_advantages, batch_logprobs = memory.sample(params.batch_size)
-            batch_actions = Variable(batch_actions.data, requires_grad=False)
-            batch_states = Variable(batch_states.data, requires_grad=False)
-            batch_returns = Variable(batch_returns.data, requires_grad=False)
-            batch_advantages = Variable(batch_advantages.data, requires_grad=False)
-            batch_logprobs = Variable(batch_logprobs.data, requires_grad=False)
 
             # new probas
-            mu, sigma_sq, v_pred = model(batch_states)
-            log_std = model.log_std
-            log_probs = -0.5 * ((batch_actions - mu) / sigma_sq).pow(2) - 0.5 * math.log(2 * math.pi) - log_std
+            Mu = []
+            Sigma = []
+
+            hx = torch.zeros((memory.batchsize,params.lstmhiddensize))
+            cx = torch.zeros((memory.batchsize,params.lstmhiddensize))
+            for states in batch_states:
+                mu, sigma, v_pred, hx, cx = model(states, hx, cx)
+                Mu.append(mu)
+                Sigma.append(sigma)     #size: length * batch * sigma_size
+
+            Mu = torch.stack(Mu,0)
+            Sigma = torch.stack(Sigma,0)
+
+            log_probs = -0.5 * ((batch_actions - Mu)/ torch.exp(Sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - Sigma
             log_probs = log_probs.sum(-1, keepdim=True)
-            dist_entropy = 0.5 + 0.5 * math.log(2 * math.pi) + log_std
+            dist_entropy = 0.5 + 0.5 * math.log(2 * math.pi) + Sigma
             dist_entropy = dist_entropy.sum(-1).mean()
 
             # ratio

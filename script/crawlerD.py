@@ -1,12 +1,12 @@
 import sys, time, os, argparse, socket
 import torch
-import glob
 import torch.optim as optim
 from torch.autograd import Variable
 import gym
-import crawler.register_all_env
-import rospy
+#import crawler.register_all_env
+#import rospy
 from Training import *
+import pybullet_envs
 from ACNet import acNet, load_checkpoint, Shared_obs_stats
 
 
@@ -58,18 +58,16 @@ parser.add_argument('--mode',           type=str, help='train test demo')
 params = parser.parse_args();
 
 def main():
-    rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
-    torch.manual_seed(params.seed)
-    #work_dir = mkdir('exp', 'ppo')
+    #rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
     env = gym.make(params.env_name)
-    #monitor_dir = mkdir(work_dir, 'monitor')
-    # env = wrappers.Monitor(env, monitor_dir, force=True)
 
+    torch.manual_seed(params.seed)
     num_inputs = env.observation_space.shape[0]
     num_outputs = env.action_space.shape[0]
     model = acNet(num_inputs, num_outputs, params.lstmhiddensize)
     shared_obs_stats = Shared_obs_stats(num_inputs)
     optimizer = optim.Adam(model.parameters(), lr=params.lr, weight_decay = params.weight_decay)
+
 
     #train mode
     if params.mode == 'train':
@@ -81,12 +79,13 @@ def main():
             load_checkpoint(params.save_path, params.initial_model, model, optimizer)
 
 
+
         print('Python Version:', sys.version)
         print('PyTorch Version:', torch.__version__)
         print('Number of GPUs:', torch.cuda.device_count())
         print('Save path:', params.save_path)
 
-        train(env, model, optimizer, shared_obs_stats, **vars(params))
+        train(env, model, optimizer, shared_obs_stats, params)
 
 
     #test mode

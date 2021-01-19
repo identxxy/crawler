@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 
 class acNet(nn.Module):
@@ -11,14 +12,14 @@ class acNet(nn.Module):
         self.lstm = nn.LSTMCell(40, lstm_hidden_size)
         self.critic_linear = nn.Linear(lstm_hidden_size, 1)
         self.actor_linear = nn.Linear(lstm_hidden_size, 60)
-        self.mu_linear = nn.linear(60, num_actions)
-        self.sigma_linear = nn.linear(60, num_actions)
+        self.mu_linear = nn.Linear(60, num_actions)
+        self.sigma_linear = nn.Linear(60, num_actions)
 
     def forward(self, x, hx, cx):
 
-        x = F.ReLU(self.linear(x.view(x.size(0), -1)))
+        x = F.relu(self.linear(x.view(x.size(0), -1)))
         hx, cx = self.lstm(x, (hx, cx))
-        actor = F.ReLU(self.actor_linear(hx))
+        actor = F.relu(self.actor_linear(hx))
         mu = self.mu_linear(actor)
         sigma = self.sigma_linear(actor)
         return mu, sigma, self.critic_linear(hx), hx, cx
