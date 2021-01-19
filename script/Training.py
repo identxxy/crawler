@@ -1,20 +1,10 @@
-import gym
-import time
-import random
 import os
-import qlearn
+import sys
+import gym
 from gym import wrappers
-from functools import reduce
-
-# ROS packages required
-import rospy
-import rospkg
-import crawler.register_all_env
-
+import random
 import numpy as np
 import math
-
-import pybullet_envs
 
 import torch
 import torch.optim as optim
@@ -23,30 +13,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from ACNet import acNet, save_checkpoint, load_checkpoint
-
-class Params():
-    def __init__(self):
-        self.batch_size = 64
-        self.lr = 7e-4
-        self.gamma = 0.99
-        self.gae_param = 0.95
-        self.clip = 0.2
-        self.ent_coeff = 0.01
-        self.num_epoch = 10
-        self.num_steps = 2048
-        self.time_horizon = 1000000
-        self.max_episode_length = 10000
-        self.max_grad_norm = 0.5
-        self.seed = 1
-        #self.env_name = 'InvertedPendulum-v1'
-        #self.env_name = 'InvertedDoublePendulum-v1'
-        #self.env_name = 'Reacher-v1'
-        #self.env_name = 'Pendulum-v0'
-        #self.env_name = 'HalfCheetahBulletEnv-v0'
-        #self.env_name = 'HopperBulletEnv-v0'#'Hopper-v1'
-        #self.env_name = 'Ant-v1'#'AntBulletEnv-v0'#
-        #self.env_name = 'HalfCheetah-v1'
+from ACNet import save_checkpoint, load_checkpoint
+import crawler.register_all_env
+import rospy
 
 class ReplayMemory(object):
     def __init__(self, capacity):
@@ -66,14 +35,13 @@ class ReplayMemory(object):
         samples = zip(*random.sample(self.memory, batch_size))
         return map(lambda x: torch.cat(x, 0), samples)
 
-def train(env, model, optimizer, shared_obs_stats):
+def train(env, model, optimizer, shared_obs_stats, params):
     memory = ReplayMemory(params.num_steps)
-    num_inputs = env.observation_space.shape[0]
-    num_outputs = env.action_space.shape[0]
     state = env.reset()
     state = Variable(torch.Tensor(state).unsqueeze(0))
     done = True
-    episode = -1
+    episode = params.initial_model
+    model.train()
 
     # horizon loop
     for t in range(params.time_horizon):
@@ -89,6 +57,8 @@ def train(env, model, optimizer, shared_obs_stats):
             av_reward = 0
             cum_reward = 0
             cum_done = 0
+            hx = torch.randn((params.lstmhiddensize, 1))
+            cx = torch.randn((params.lstmhiddensize, 1))
 
             # n steps loops
             for step in range(params.num_steps):
@@ -96,7 +66,7 @@ def train(env, model, optimizer, shared_obs_stats):
                 shared_obs_stats.observes(state)
                 state = shared_obs_stats.normalize(state)
                 states.append(state)
-                mu, sigma_sq, v = model(state)
+                mu, sigma_sq, v, hx_, cx_ = model(state, hx, cx)
                 action = (mu + sigma_sq*Variable(torch.randn(mu.size())))
                 actions.append(action)
                 log_std = model.log_std
@@ -108,8 +78,10 @@ def train(env, model, optimizer, shared_obs_stats):
                 state, reward, done, _ = env.step(env_action)
                 done = (done or episode_length >= params.max_episode_length)
                 cum_reward += reward
-                reward = max(min(reward, 1), -1)
+                # reward = max(min(reward, 1), -1)
                 rewards.append(reward)
+                hx = hx_
+                cx = cx_
 
                 if done:
                     episode += 1
@@ -181,7 +153,8 @@ def train(env, model, optimizer, shared_obs_stats):
             optimizer.step()
 
         # finish, print:
-        save_checkpoint('net.pt', model, optimizer)
+        if episode % params.save_interval ==0:
+            save_checkpoint(params.save_path, model, optimizer)
         print('episode',episode,'av_reward',av_reward/float(cum_done))
         memory.clear()
 
