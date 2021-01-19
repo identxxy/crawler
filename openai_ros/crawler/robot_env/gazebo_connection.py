@@ -121,8 +121,7 @@ class GazeboConnection():
         friction coeficients and so on.
         """
         self._time_step = Float64(0.001)
-        # maximize the simulation speed
-        self._max_update_rate = Float64(0.0)
+        self._max_update_rate = Float64(1000.0)
 
         self._gravity = Vector3()
         self._gravity.x = 0.0
