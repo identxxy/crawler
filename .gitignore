@@ -1,4 +1,6 @@
 .*
 training_results/
 */__pycache__
+*.py[cod]
+*.pt
 !.gitignore

@@ -26,7 +26,8 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         LoadYamlFileParamsTest("crawler", "config", "standup_param.yaml")
         # Variables that we retrieve through the param server, loded when launch training launch.
         self.reward_height_b = rospy.get_param('/crawler/reward_height_b')
-        self.reward_height_k = rospy.get_param('/crawler/reward_height_k')
+        self.reward_height_k_pos = rospy.get_param('/crawler/reward_height_k_pos')
+        self.reward_height_k_neg = rospy.get_param('/crawler/reward_height_k_neg')
         self.effort_penalty = rospy.get_param('/crawler/effort_penalty')
         self.effort_scale = rospy.get_param('/crawler/effort_scale')
         self.epoch_steps = rospy.get_param('/crawler/epoch_steps')
@@ -105,8 +106,12 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Return the reward based on the observations given
         """
-        reward = (self.global_pos.position.z - self.reward_height_b ) * self.reward_height_k
-        reward -= self.effort_penalty * sum(self.joints.effort)
+        dist = self.global_pos.position.z - self.reward_height_b 
+        if dist > 0:
+            reward = dist * self.reward_height_k_pos
+        else:
+            reward = dist * self.reward_height_k_neg
+        reward -= self.effort_penalty * sum(map(abs, self.joints.effort)) 
         return reward
         
     # Internal TaskEnv Methods

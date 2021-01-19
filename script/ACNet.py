@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -37,5 +38,3 @@ def load_checkpoint(model, optimizer):
     optimizer.load_state_dict(state_dict['optimizer_state_dict'])
 
     print(f'Model loaded from <== {save_path}')
-
-    return val_loss, train_loss_his, val_loss_his

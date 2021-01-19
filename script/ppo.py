@@ -14,6 +14,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from model import Model, Shared_obs_stats
+from ACNet import save_checkpoint, load_checkpoint
 import crawler.register_all_env
 import rospy
 
@@ -27,7 +28,7 @@ class Params():
         self.ent_coeff = 0.01
         self.num_epoch = 10
         self.num_steps = 1024
-        self.time_horizon = 100
+        self.time_horizon = 1000000
         self.max_episode_length = 10000
         self.max_grad_norm = 0.5
         self.seed = 1
@@ -58,7 +59,7 @@ def train(env, model, optimizer, shared_obs_stats):
     state = env.reset()
     state = Variable(torch.Tensor(state).unsqueeze(0))
     done = True
-    episode = -1
+    episode = 0
 
     # horizon loop
     for t in range(params.time_horizon):
@@ -166,6 +167,8 @@ def train(env, model, optimizer, shared_obs_stats):
             optimizer.step()
 
         # finish, print:
+        if episode%20 ==0:
+            save_checkpoint('net.pt', model, optimizer)
         print('episode',episode,'av_reward',av_reward/float(cum_done))
         memory.clear()
 
