@@ -13,8 +13,8 @@
       <real_time_update_rate>0.0</real_time_update_rate>
       <ode>
         <solver>
-          <thread_position_correction>1</thread_position_correction>
-          <island_threads>2</island_threads>
+          <thread_position_correction>3</thread_position_correction>
+          <island_threads>3</island_threads>
         </solver>
       </ode>
     </physics>
