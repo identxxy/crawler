@@ -5,7 +5,7 @@ from torch.autograd import Variable
 
 
 class acNet(nn.Module):
-    def __init__(self, num_inputs, num_actions, lstm_hidden_size):
+    def __init__(self, num_inputs, num_actions, hiddensize, lstm_hidden_size):
         super(acNet, self).__init__()
 
         self.linear = nn.Linear(num_inputs, 40)
@@ -19,7 +19,7 @@ class acNet(nn.Module):
 
         x = F.relu(self.linear(x.view(x.size(0), -1)))
         hx, cx = self.lstm(x, (hx, cx))
-        actor = F.relu(self.actor_linear(hx))
+        actor = F.tanh(self.actor_linear(hx))
         mu = self.mu_linear(actor)
         sigma = self.sigma_linear(actor)
         return mu, sigma, self.critic_linear(hx), hx, cx

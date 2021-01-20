@@ -167,8 +167,9 @@ def train(env, model, optimizer, shared_obs_stats):
             optimizer.step()
 
         # finish, print:
-        if episode%20 ==0:
-            save_checkpoint('net.pt', model, optimizer)
+        # 15s 4 episodes
+        if (episode/4)%(4*30) ==0:
+            save_checkpoint('./training_results',episode, model, optimizer)
         print('episode',episode,'av_reward',av_reward/float(cum_done))
         memory.clear()
 

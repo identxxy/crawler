@@ -36,15 +36,15 @@ class Model(nn.Module):
 
     def forward(self, inputs):
         # actor
-        x = F.tanh(self.p_fc0(inputs))
-        x = F.tanh(self.p_fc1(x))
-        x = F.tanh(self.p_fc2(x))
+        x = torch.tanh(self.p_fc0(inputs))
+        x = torch.tanh(self.p_fc1(x))
+        x = torch.tanh(self.p_fc2(x))
         mu = self.mu(x)
         sigma_sq = torch.exp(self.log_std)
         # critic
-        x = F.tanh(self.v_fc0(inputs))
-        x = F.tanh(self.v_fc1(x))
-        x = F.tanh(self.v_fc2(x))
+        x = torch.tanh(self.v_fc0(inputs))
+        x = torch.tanh(self.v_fc1(x))
+        x = torch.tanh(self.v_fc2(x))
         v = self.v(x)
         return mu, sigma_sq, v
 

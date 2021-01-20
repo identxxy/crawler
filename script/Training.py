@@ -122,7 +122,6 @@ def train(env, model, optimizer, shared_obs_stats, params):
 
         # epochs
         batch_states, batch_actions, batch_returns, batch_advantages, batch_logprobs = memory.pull()
-        print(batch_actions.shape)
         batch_actions = Variable(batch_actions.data, requires_grad=False)
         batch_states = Variable(batch_states.data, requires_grad=False)
         batch_returns = Variable(batch_returns.data, requires_grad=False)
@@ -173,7 +172,7 @@ def train(env, model, optimizer, shared_obs_stats, params):
 
         # finish, print:
         if episode % params.save_interval ==0:
-            save_checkpoint(params.save_path, model, optimizer)
+            save_checkpoint(params.save_path, episode, model, optimizer)
         print('episode',episode,'av_reward',av_reward/float(cum_done))
         memory.clear()
 
