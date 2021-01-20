@@ -172,7 +172,7 @@ def train(env, model, optimizer, shared_obs_stats, params):
 
         # finish, print:
         if episode % params.save_interval ==0:
-            save_checkpoint(params.save_path, episode, model, optimizer)
+            save_checkpoint(params.save_path, model, optimizer)
         print('episode',episode,'av_reward',av_reward/float(cum_done))
         memory.clear()
 

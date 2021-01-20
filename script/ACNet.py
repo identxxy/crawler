@@ -5,21 +5,30 @@ from torch.autograd import Variable
 
 
 class acNet(nn.Module):
-    def __init__(self, num_inputs, num_actions, hiddensize, lstm_hidden_size):
+    def __init__(self, num_inputs, num_actions, hidden_size, lstm_hidden_size):
         super(acNet, self).__init__()
 
-        self.linear = nn.Linear(num_inputs, 40)
-        self.lstm = nn.LSTMCell(40, lstm_hidden_size)
-        self.critic_linear = nn.Linear(lstm_hidden_size, 1)
+        self.linear = nn.Linear(num_inputs, hidden_size[0])
+
+        self.hidden = []
+        for i in range(len(hidden_size)-1):
+            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]))
+
+        self.lstm = nn.LSTMCell(hidden_size[-1], lstm_hidden_size)
+        self.critic_linear = nn.Sequential(nn.Linear(lstm_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
         self.actor_linear = nn.Linear(lstm_hidden_size, 60)
         self.mu_linear = nn.Linear(60, num_actions)
         self.sigma_linear = nn.Linear(60, num_actions)
 
     def forward(self, x, hx, cx):
 
-        x = F.relu(self.linear(x.view(x.size(0), -1)))
+        x = torch.tanh(self.linear(x.view(x.size(0), -1)))
+
+        for layer in self.hidden:
+            x = torch.tanh(layer(x))
+
         hx, cx = self.lstm(x, (hx, cx))
-        actor = F.tanh(self.actor_linear(hx))
+        actor = torch.tanh(self.actor_linear(hx))
         mu = self.mu_linear(actor)
         sigma = self.sigma_linear(actor)
         return mu, sigma, self.critic_linear(hx), hx, cx
