@@ -3,8 +3,8 @@ import torch
 import torch.optim as optim
 from torch.autograd import Variable
 import gym
-import crawler.register_all_env
-import rospy
+#import crawler.register_all_env
+#import rospy
 from Training import *
 import pybullet_envs
 from ACNet import acNet, load_checkpoint, Shared_obs_stats
@@ -22,8 +22,8 @@ parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number
 parser.add_argument('--env_name',      type=str,   default="CrawlerStandupEnv-v0", help='env_name');
 
 ## Training details
-parser.add_argument('--save_interval',  type=int,   default=60,     help='Test and save every [test_interval] epochs');
-parser.add_argument('--time_horizon',      type=int,   default=100000,    help='Maximum number of epochs');
+parser.add_argument('--save_interval',  type=int,   default=20,     help='Test and save every [test_interval] epochs');
+parser.add_argument('--time_horizon',      type=int,   default=500,    help='Maximum number of epochs');
 parser.add_argument('--max_episode_length',      type=int,   default=1000,    help='Maximum number of episodes');
 
 ## Optimizer
@@ -48,8 +48,8 @@ parser.add_argument('--save_path',      type=str,   default="exp", help='Path fo
 
 ## Model definition
 parser.add_argument('--inputsize',         type=int,   default=61,     help='inputsize');
-parser.add_argument('--hiddensize',      type=int,  default=48,  help='Embedding size in the first FC layer')
-parser.add_argument('--lstmhiddensize',   type=int,   default=80,  help='Embedding size in the LSTM layer');
+parser.add_argument('--hiddensize', nargs='+', type=int,   default = [100, 100, 100],  help='hiddensize')
+parser.add_argument('--lstmhiddensize',   type=int,   default=100,  help='Embedding size in the LSTM layer');
 parser.add_argument('--outputsize',           type=int,   default=12,    help='outputsize');
 
 ## For test only
@@ -58,13 +58,13 @@ parser.add_argument('--mode',           type=str, help='train test demo')
 params = parser.parse_args();
 
 def main():
-    rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
+    #rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
     env = gym.make(params.env_name)
 
     torch.manual_seed(params.seed)
     num_inputs = env.observation_space.shape[0]
     num_outputs = env.action_space.shape[0]
-    model = acNet(num_inputs, num_outputs, params.lstmhiddensize)
+    model = acNet(num_inputs, num_outputs, params.hiddensize, params.lstmhiddensize)
     shared_obs_stats = Shared_obs_stats(num_inputs)
     optimizer = optim.Adam(model.parameters(), lr=params.lr, weight_decay = params.weight_decay)
 
@@ -92,8 +92,8 @@ def main():
     elif params.mode == 'test':
         state = env.reset()
         state = Variable(torch.Tensor(state).unsqueeze(0))
-        hx = torch.zeros((1,params.lstmhiddensize))
-        cx = torch.zeros((1,params.lstmhiddensize))
+        hx = torch.zeros((1, params.lstmhiddensize))
+        cx = torch.zeros((1, params.lstmhiddensize))
         load_checkpoint(params.save_path, params.initial_model, model, optimizer)
         model.eval()
         while (True):
