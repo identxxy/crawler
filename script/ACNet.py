@@ -3,10 +3,34 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-
 class acNet(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_size, lstm_hidden_size):
         super(acNet, self).__init__()
+        self.cell = acNetCell(num_inputs, num_actions, hidden_size, lstm_hidden_size)
+
+    def single_forward(self, x, hx, cx):
+        return self.cell(x, hx, cx)
+
+    def sequence_forward(self, x, hx, cx):
+        Mu = []
+        Sigma = []
+        V_pred = []
+        for states in x:
+            mu, sigma, v_pred, hx, cx = self.cell(states, hx, cx)
+            Mu.append(mu)
+            Sigma.append(sigma)
+            V_pred.append(v_pred)
+
+        Mu = torch.stack(Mu, 0)
+        Sigma = torch.stack(Sigma, 0)
+        V_pred = torch.stack(V_pred, 0)
+
+        return Mu, Sigma, V_pred
+
+
+class acNetCell(nn.Module):
+    def __init__(self, num_inputs, num_actions, hidden_size, lstm_hidden_size):
+        super(acNetCell, self).__init__()
 
         self.linear = nn.Linear(num_inputs, hidden_size[0])
 

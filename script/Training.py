@@ -73,7 +73,7 @@ def train(env, model, optimizer, shared_obs_stats, params):
                 shared_obs_stats.observes(state)
                 state = shared_obs_stats.normalize(state)
                 states.append(state)
-                mu, sigma, v, hx, cx = model(state, hx, cx)
+                mu, sigma, v, hx, cx = model.single_forward(state, hx, cx)
                 #h.append(hx)
                 #c.append(cx)
                 action = (mu + torch.exp(sigma)*Variable(torch.randn(mu.size())))
@@ -131,21 +131,9 @@ def train(env, model, optimizer, shared_obs_stats, params):
         for k in range(params.num_epoch):
 
             # new probas
-            Mu = []
-            Sigma = []
-            V_pred = []
-
             hx = torch.zeros((memory.batchsize,params.lstmhiddensize))
             cx = torch.zeros((memory.batchsize,params.lstmhiddensize))
-            for states in batch_states:
-                mu, sigma, v_pred, hx, cx = model(states, hx, cx)
-                Mu.append(mu)
-                Sigma.append(sigma) 
-                V_pred.append(v_pred)     #size: length * batch * sigma_size
-
-            Mu = torch.stack(Mu,0)
-            Sigma = torch.stack(Sigma,0)
-            V_pred = torch.stack(V_pred,0)
+            Mu, Sigma, V_pred= model.sequence_forward(batch_states, hx, cx)     #size: length * batch * sigma_size
 
             log_probs = -0.5 * ((batch_actions - Mu)/ torch.exp(Sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - Sigma
             #log_probs = log_probs.sum(-1, keepdim=True)
