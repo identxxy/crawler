@@ -3,19 +3,20 @@ import torch
 import torch.optim as optim
 from torch.autograd import Variable
 import gym
-#import crawler.register_all_env
-#import rospy
+
 from Training import *
-import pybullet_envs
 from ACNet import acNet, load_checkpoint, Shared_obs_stats
 
+import crawler.register_all_env
+import rospy
 
+# import pybullet_envs
 
 #config param
 parser = argparse.ArgumentParser(description = "crawlerD");
 
 ## env
-parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input length to the network for training');
+parser.add_argument('--num_steps',     type=int,   default=2048,    help='Input length to the network for training');
 parser.add_argument('--batch_size',     type=int,   default=64,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
@@ -31,7 +32,7 @@ parser.add_argument('--optimizer',      type=str,   default="adam", help='sgd or
 parser.add_argument('--scheduler',      type=str,   default="steplr", help='Learning rate scheduler');
 parser.add_argument('--lr',             type=float, default=1e-4,  help='Learning rate');
 parser.add_argument('--weight_decay',   type=float, default=0,      help='Weight decay in the optimizer');
-parser.add_argument('--num_epoch',      type=int,   default=10,    help='number of epochs of optimize');
+parser.add_argument('--num_epoch',      type=int,   default=2,    help='number of epochs of optimize');
 
 ## Loss functions
 parser.add_argument('--gamma',             type=float, default=0.99,  help='gamma');
@@ -58,7 +59,7 @@ parser.add_argument('--mode',           type=str, help='train test demo')
 params = parser.parse_args();
 
 def main():
-    #rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
+    rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
     env = gym.make(params.env_name)
 
     torch.manual_seed(params.seed)

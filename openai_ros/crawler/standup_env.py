@@ -26,10 +26,9 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         LoadYamlFileParamsTest("crawler", "config", "standup_param.yaml")
         # Variables that we retrieve through the param server, loded when launch training launch.
         self.reward_height_b = rospy.get_param('/crawler/reward_height_b')
-        self.reward_height_k_pos = rospy.get_param('/crawler/reward_height_k_pos')
-        self.reward_height_k_neg = rospy.get_param('/crawler/reward_height_k_neg')
+        self.reward_height_k = rospy.get_param('/crawler/reward_height_k')
         self.effort_penalty = rospy.get_param('/crawler/effort_penalty')
-        self.effort_scale = rospy.get_param('/crawler/effort_scale')
+        self.effort_max = rospy.get_param('/crawler/effort_max')
         self.epoch_steps = rospy.get_param('/crawler/epoch_steps')
         self.running_step = rospy.get_param('/crawler/running_step')
         # Construct the RobotEnv so we know the dimension of cmd
@@ -61,7 +60,7 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Move the robot based on the action variable given
         """
-        self.cmd = self.effort_scale * action
+        self.cmd = self.effort_max * action
         self.move_joints(self.cmd)
         rospy.sleep(self.running_step)
         self.steps += 1
@@ -99,19 +98,15 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Decide if episode is done based on the observations
         """
-        done = self.steps > self.epoch_steps
+        done = self.steps >= self.epoch_steps
         return done
 
     def _compute_reward(self, observations, done):
         """
         Return the reward based on the observations given
         """
-        dist = self.global_pos.position.z - self.reward_height_b 
-        if dist > 0:
-            reward = dist * self.reward_height_k_pos
-        else:
-            reward = dist * self.reward_height_k_neg
-        reward -= self.effort_penalty * sum(map(abs, self.joints.effort)) 
+        reward = (self.global_pos.position.z - self.reward_height_b) * self.reward_height_k
+        reward -= self.effort_penalty * sum(map(abs, self.joints.effort)) / self.effort_max
         return reward
         
     # Internal TaskEnv Methods

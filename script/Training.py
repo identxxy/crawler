@@ -79,7 +79,7 @@ def train(env, model, optimizer, shared_obs_stats, params):
                 action = (mu + torch.exp(sigma)*Variable(torch.randn(mu.size())))
                 actions.append(action)
                 log_prob = -0.5 * ((action - mu) / torch.exp(sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - sigma
-                log_prob = log_prob.sum(-1, keepdim=True)
+                #log_prob = log_prob.sum(-1, keepdim=True)
                 logprobs.append(log_prob)
                 values.append(v)
                 env_action = action.data.squeeze().numpy()
@@ -133,21 +133,24 @@ def train(env, model, optimizer, shared_obs_stats, params):
             # new probas
             Mu = []
             Sigma = []
+            V_pred = []
 
             hx = torch.zeros((memory.batchsize,params.lstmhiddensize))
             cx = torch.zeros((memory.batchsize,params.lstmhiddensize))
             for states in batch_states:
                 mu, sigma, v_pred, hx, cx = model(states, hx, cx)
                 Mu.append(mu)
-                Sigma.append(sigma)     #size: length * batch * sigma_size
+                Sigma.append(sigma) 
+                V_pred.append(v_pred)     #size: length * batch * sigma_size
 
             Mu = torch.stack(Mu,0)
             Sigma = torch.stack(Sigma,0)
+            V_pred = torch.stack(V_pred,0)
 
             log_probs = -0.5 * ((batch_actions - Mu)/ torch.exp(Sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - Sigma
-            log_probs = log_probs.sum(-1, keepdim=True)
+            #log_probs = log_probs.sum(-1, keepdim=True)
             dist_entropy = 0.5 + 0.5 * math.log(2 * math.pi) + Sigma
-            dist_entropy = dist_entropy.sum(-1).mean()
+            dist_entropy = dist_entropy.mean()
 
             # ratio
             ratio = torch.exp(log_probs - batch_logprobs)
@@ -158,7 +161,7 @@ def train(env, model, optimizer, shared_obs_stats, params):
             loss_clip = - torch.mean(torch.min(surr1, surr2))
 
             # value loss
-            loss_value = (v_pred - batch_returns).pow(2).mean()
+            loss_value = (V_pred - batch_returns).pow(2).mean()
 
             # entropy
             loss_ent = - params.ent_coeff * dist_entropy
@@ -172,7 +175,7 @@ def train(env, model, optimizer, shared_obs_stats, params):
 
         # finish, print:
         if episode % params.save_interval ==0:
-            save_checkpoint(params.save_path, model, optimizer)
+            save_checkpoint(params.save_path, episode, model, optimizer)
         print('episode',episode,'av_reward',av_reward/float(cum_done))
         memory.clear()
 

@@ -14,7 +14,6 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from model import Model, Shared_obs_stats
-from ACNet import save_checkpoint, load_checkpoint
 import crawler.register_all_env
 import rospy
 
@@ -33,6 +32,28 @@ class Params():
         self.max_grad_norm = 0.5
         self.seed = 1
         self.env_name = 'CrawlerStandupEnv-v0'
+        self.mode = 'load'
+        self.load_path = 'net-backup.pt'
+
+def save_checkpoint(save_path, episode, model, optimizer):
+    if save_path == None:
+        return
+    save_path = '%s/%d.pt'%(save_path,episode)
+    state_dict = {'model_state_dict': model.state_dict(),
+                  'optimizer_state_dict': optimizer.state_dict()}
+
+    torch.save(state_dict, save_path)
+
+    print(f'Model saved to ==> {save_path}')
+
+
+def load_checkpoint(file_name, model, optimizer):
+    save_path = file_name
+    state_dict = torch.load(save_path)
+    model.load_state_dict(state_dict['model_state_dict'])
+    optimizer.load_state_dict(state_dict['optimizer_state_dict'])
+
+    print(f'Model loaded from <== {save_path}')
 
 class ReplayMemory(object):
     def __init__(self, capacity):
@@ -193,4 +214,8 @@ if __name__ == '__main__':
     model = Model(num_inputs, num_outputs)
     shared_obs_stats = Shared_obs_stats(num_inputs)
     optimizer = optim.Adam(model.parameters(), lr=params.lr)
+
+    if params.mode == 'load':
+        load_checkpoint(params.load_path, model, optimizer)
     train(env, model, optimizer, shared_obs_stats)
+       
