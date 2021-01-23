@@ -32,7 +32,7 @@ parser.add_argument('--optimizer',      type=str,   default="adam", help='sgd or
 parser.add_argument('--scheduler',      type=str,   default="steplr", help='Learning rate scheduler');
 parser.add_argument('--lr',             type=float, default=1e-4,  help='Learning rate');
 parser.add_argument('--weight_decay',   type=float, default=0,      help='Weight decay in the optimizer');
-parser.add_argument('--num_epoch',      type=int,   default=2,    help='number of epochs of optimize');
+parser.add_argument('--num_epoch',      type=int,   default=10,    help='number of epochs of optimize');
 
 ## Loss functions
 parser.add_argument('--gamma',             type=float, default=0.99,  help='gamma');

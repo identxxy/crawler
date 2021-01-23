@@ -11,7 +11,7 @@ class acNet(nn.Module):
     def single_forward(self, x, hx, cx):
         return self.cell(x, hx, cx)
 
-    def sequence_forward(self, x, hx, cx):
+    def forward(self, x, hx, cx):
         Mu = []
         Sigma = []
         V_pred = []
@@ -37,12 +37,14 @@ class acNetCell(nn.Module):
         self.hidden = []
         for i in range(len(hidden_size)-1):
             self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]))
+            #self.hidden.append(nn.BatchNorm1d(hidden_size[i+1]))
+            #self.hidden.append(nn.ReLU())
 
         self.lstm = nn.LSTMCell(hidden_size[-1], lstm_hidden_size)
         self.critic_linear = nn.Sequential(nn.Linear(lstm_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
-        self.actor_linear = nn.Linear(lstm_hidden_size, 60)
-        self.mu_linear = nn.Linear(60, num_actions)
-        self.sigma_linear = nn.Linear(60, num_actions)
+        #self.actor_linear = nn.Linear(lstm_hidden_size, 60)
+        self.mu_linear = nn.Linear(lstm_hidden_size, num_actions)
+        self.sigma_linear = nn.Linear(lstm_hidden_size, num_actions)
 
     def forward(self, x, hx, cx):
 
@@ -52,10 +54,10 @@ class acNetCell(nn.Module):
             x = torch.tanh(layer(x))
 
         hx, cx = self.lstm(x, (hx, cx))
-        actor = torch.tanh(self.actor_linear(hx))
-        mu = self.mu_linear(actor)
-        sigma = self.sigma_linear(actor)
-        return mu, sigma, self.critic_linear(hx), hx, cx
+        #actor = torch.tanh(self.actor_linear(hx))
+        mu = torch.tanh(self.mu_linear(hx))
+        sigma = self.sigma_linear(hx)
+        return mu, sigma, torch.tanh(self.critic_linear(hx)), hx, cx
 
 
 def save_checkpoint(save_path, episode, model, optimizer):
