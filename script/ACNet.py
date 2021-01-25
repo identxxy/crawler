@@ -3,15 +3,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+
+def weights_init_uniform(m):
+    if isinstance(m, nn.BatchNorm1d):
+        torch.nn.init.xavier_uniform(m.weight.data, mean=1, std=0.02)
+        torch.nn.init.constant_(m.bias.data, 0.1)
+
 class acNet(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_size, lstm_hidden_size):
         super(acNet, self).__init__()
         self.cell = acNetCell(num_inputs, num_actions, hidden_size, lstm_hidden_size)
+        self.cell.apply(weights_init_uniform)
 
     def single_forward(self, x, hx, cx):
         return self.cell(x, hx, cx)
 
-    def forward(self, x, hx, cx):
+    def sequence_forward(self, x, hx, cx):
         Mu = []
         Sigma = []
         V_pred = []
@@ -36,28 +43,51 @@ class acNetCell(nn.Module):
 
         self.hidden = []
         for i in range(len(hidden_size)-1):
-            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]))
-            #self.hidden.append(nn.BatchNorm1d(hidden_size[i+1]))
+            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]).cuda())
+            #self.hidden.append(nn.BatchNorm1d(hidden_size[i + 1]))
             #self.hidden.append(nn.ReLU())
 
-        self.lstm = nn.LSTMCell(hidden_size[-1], lstm_hidden_size)
-        self.critic_linear = nn.Sequential(nn.Linear(lstm_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
-        #self.actor_linear = nn.Linear(lstm_hidden_size, 60)
-        self.mu_linear = nn.Linear(lstm_hidden_size, num_actions)
-        self.sigma_linear = nn.Linear(lstm_hidden_size, num_actions)
+
+
+        self.lstm = nn.LSTM(hidden_size[-1], lstm_hidden_size, batch_first=False)
+        #self.critic_linear = nn.Sequential(nn.Linear(lstm_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
+        self.critic_linear = torch.nn.Parameter(torch.zeros(1, num_actions))
+        self.actor_linear = nn.Linear(lstm_hidden_size, 60)
+        self.mu_linear = nn.Linear(60, num_actions)
+        self.sigma_linear = nn.Linear(60, num_actions)
+
+
 
     def forward(self, x, hx, cx):
 
-        x = torch.tanh(self.linear(x.view(x.size(0), -1)))
+        x = torch.tanh(self.linear(x))
 
         for layer in self.hidden:
             x = torch.tanh(layer(x))
 
-        hx, cx = self.lstm(x, (hx, cx))
-        #actor = torch.tanh(self.actor_linear(hx))
-        mu = torch.tanh(self.mu_linear(hx))
-        sigma = self.sigma_linear(hx)
-        return mu, sigma, torch.tanh(self.critic_linear(hx)), hx, cx
+        #nn.utils.rnn.pack_padded_sequence(x, None, batch_first=False)
+
+        x, (hx, cx) = self.lstm(x, (hx, cx))
+        #x,_ = nn.utils.rnn.pad_packed_sequence(x, batch_first=False)
+        actor = torch.tanh(self.actor_linear(x))
+        mu = self.mu_linear(actor)
+        sigma = self.sigma_linear(actor)
+        return mu, sigma, self.critic_linear(x)
+
+    def single_forward(self, x, hx, cx):
+        x = torch.tanh(self.linear(x))
+        #print(hx.shape)
+        #print(x.shape)
+
+        for layer in self.hidden:
+            #print(x)
+            x = torch.tanh(layer(x))
+
+        x,(hx, cx) = self.lstm(x, (hx, cx))
+        actor = torch.tanh(self.actor_linear(x))
+        mu = self.mu_linear(actor)
+        sigma = self.sigma_linear(actor)
+        return mu, sigma, self.critic_linear, hx, cx
 
 
 def save_checkpoint(save_path, episode, model, optimizer):

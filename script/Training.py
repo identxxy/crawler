@@ -15,6 +15,7 @@ from torch.autograd import Variable
 
 from ACNet import save_checkpoint, load_checkpoint
 
+
 class ReplayMemory(object):
     def __init__(self, capacity):
         self.capacity = capacity
@@ -23,12 +24,13 @@ class ReplayMemory(object):
         self.memory = []
 
     def push(self, events):
-        #Events = list(zip(*events))
-        self.memory.append(map(lambda x: torch.cat(x,0), events))
+        # Events = list(zip(*events))
+        self.memory.append(map(lambda x: torch.cat([torch.repeat_interleave(torch.zeros_like(x[0]),(1000-len(x)),dim = 0),
+                                                    torch.cat(x, 0)],0), events))
         self.load += len(events[1])
         self.batchsize += 1
-        #if len(self.memory)>self.capacity:
-            #del self.memory[0]
+        # if len(self.memory)>self.capacity:
+        # del self.memory[0]
 
     def clear(self):
         self.memory = []
@@ -37,22 +39,23 @@ class ReplayMemory(object):
 
     def pull(self):
         Memory = list(zip(*self.memory))
-        data = map(lambda x: torch.stack(x,0).permute(1,0,2), Memory)
+        data = map(lambda x: torch.cat(x, 1), Memory)
         return data
 
-def train(env, model, optimizer, shared_obs_stats, params):
+
+def train(env, model, optimizer, shared_obs_stats, device, params):
     memory = ReplayMemory(params.num_steps)
     state = env.reset()
     state = Variable(torch.Tensor(state).unsqueeze(0))
     done = True
     episode = params.initial_model
-    model.train()
+    #model.train()
 
     # horizon loop
     for t in range(params.time_horizon):
-        #model.eval()
+        model.eval()
         episode_length = 0
-        while(memory.load < params.num_steps):
+        while (memory.load < params.num_steps):
             states = []
             h = []
             c = []
@@ -65,26 +68,29 @@ def train(env, model, optimizer, shared_obs_stats, params):
             av_reward = 0
             cum_reward = 0
             cum_done = 0
-            hx = torch.zeros((1,params.lstmhiddensize))
-            cx = torch.zeros((1,params.lstmhiddensize))
-            
+            hx = torch.zeros((params.lstmhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
+            cx = torch.zeros((params.lstmhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
 
             # n steps loops
             for step in range(params.num_steps):
                 episode_length += 1
                 shared_obs_stats.observes(state)
-                state = shared_obs_stats.normalize(state)
+                state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
                 states.append(state)
-                mu, sigma, v, hx, cx = model.single_forward(state, hx, cx)
-                #h.append(hx)
-                #c.append(cx)
-                action = (mu + torch.exp(sigma)*Variable(torch.randn(mu.size())))
+                #print(hx.shape)
+                #print(state.shape)
+                model = model.to(device)
+                with torch.no_grad():
+                    mu, sigma, v, hx, cx = model.single_forward(state, hx, cx)
+                # h.append(hx)
+                # c.append(cx)
+                action = (mu + torch.exp(sigma) * Variable(torch.randn(mu.size()).to(device)))
                 actions.append(action)
-                log_prob = -0.5 * ((action - mu) / torch.exp(sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - sigma
+                log_prob = -0.5 * ((action - mu) / torch.exp(sigma)).pow(2) - (0.5 * math.log(2 * math.pi)) - sigma
                 log_prob = log_prob.sum(-1, keepdim=True)
                 logprobs.append(log_prob)
                 values.append(v)
-                env_action = torch.tanh(action).data.squeeze().numpy()
+                env_action = torch.tanh(action).data.squeeze().cpu().numpy()
                 state, reward, done, _ = env.step(env_action)
                 done = (done or episode_length >= params.max_episode_length)
                 cum_reward += reward
@@ -99,22 +105,23 @@ def train(env, model, optimizer, shared_obs_stats, params):
                     episode_length = 0
                     state = env.reset()
                 state = Variable(torch.Tensor(state).unsqueeze(0))
-                if done:
+                if step >= params.max_episode_length-1:
                     break
 
             # one last step
             R = torch.zeros(1, 1)
-            if not done:
-                _,_,v = model(state)
-                R = v.data
+            # if not done:
+            #     with torch.no_grad():
+            #         _, _, v, _, _ = model.single_forward(state,hx,cx)
+            #     R = v.data
 
             # compute returns and GAE(lambda) advantages:
-            R = Variable(R)
+            R = Variable(R).to(device)
             values.append(R)
-            A = Variable(torch.zeros(1, 1))
+            A = Variable(torch.zeros(1, 1)).to(device)
             for i in reversed(range(len(rewards))):
-                td = rewards[i] + params.gamma*values[i+1].data[0,0] - values[i].data[0,0]
-                A = float(td) + params.gamma*params.gae_param*A
+                td = rewards[i] + params.gamma * values[i + 1].data[0, 0] - values[i].data[0, 0]
+                A = float(td) + params.gamma * params.gae_param * A
                 advantages.insert(0, A)
                 R = A + values[i]
                 returns.insert(0, R)
@@ -122,24 +129,18 @@ def train(env, model, optimizer, shared_obs_stats, params):
             # store usefull info:
             memory.push([states, actions, returns, advantages, logprobs])
 
-         
-        #model.train()
+        model.train()
         # epochs
         batch_states, batch_actions, batch_returns, batch_advantages, batch_logprobs = memory.pull()
-        batch_actions = Variable(batch_actions.data, requires_grad=False)
-        batch_states = Variable(batch_states.data, requires_grad=False)
-        batch_returns = Variable(batch_returns.data, requires_grad=False)
-        batch_advantages = Variable(batch_advantages.data, requires_grad=False)
-        batch_logprobs = Variable(batch_logprobs.data, requires_grad=False)
+        batch_advantages = batch_advantages.unsqueeze(-1)
 
         for k in range(params.num_epoch):
-
             # new probas
-            hx = torch.zeros((memory.batchsize,params.lstmhiddensize))
-            cx = torch.zeros((memory.batchsize,params.lstmhiddensize))
-            Mu, Sigma, V_pred= model(batch_states, hx, cx)     #size: length * batch * sigma_size
+            hx = torch.zeros((memory.batchsize, params.lstmhiddensize)).unsqueeze(0).to(device)
+            cx = torch.zeros((memory.batchsize, params.lstmhiddensize)).unsqueeze(0).to(device)
+            Mu, Sigma, V_pred = model(batch_states, hx, cx)  # size: length * batch * sigma_size
 
-            log_probs = -0.5 * ((batch_actions - Mu)/ torch.exp(Sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - Sigma
+            log_probs = -0.5 * ((batch_actions - Mu) / torch.exp(Sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - Sigma
             log_probs = log_probs.sum(-1, keepdim=True)
             dist_entropy = 0.5 + 0.5 * math.log(2 * math.pi) + Sigma
             dist_entropy = dist_entropy.mean().sum(-1, keepdim=True)
@@ -148,8 +149,11 @@ def train(env, model, optimizer, shared_obs_stats, params):
             ratio = torch.exp(log_probs - batch_logprobs)
 
             # clip loss
-            surr1 = ratio * batch_advantages.expand_as(ratio) # surrogate from conservative policy iteration
-            surr2 = ratio.clamp(1-params.clip, 1+params.clip) * batch_advantages.expand_as(ratio)
+            #print(ratio.shape)
+            #print(batch_advantages.shape)
+
+            surr1 = ratio * batch_advantages.expand_as(ratio)  # surrogate from conservative policy iteration
+            surr2 = ratio.clamp(1 - params.clip, 1 + params.clip) * batch_advantages.expand_as(ratio)
             loss_clip = - torch.mean(torch.min(surr1, surr2))
 
             # value loss
@@ -161,20 +165,22 @@ def train(env, model, optimizer, shared_obs_stats, params):
             # gradient descent step
             total_loss = (loss_clip + loss_value + loss_ent)
 
-            loss = torch.square(log_probs - torch.full_like(batch_logprobs,0)).mean() + torch.square(V_pred - torch.full_like(batch_returns,1.0)).mean()
+            loss = torch.square(log_probs - torch.full_like(batch_logprobs, 0)).mean() + torch.square(
+                V_pred - torch.full_like(batch_returns, 1.0)).mean()
 
-            print(loss)
+            #print(loss)
             optimizer.zero_grad()
-            loss.backward()
+            total_loss.backward()
             #loss.backward()
-            #nn.utils.clip_grad_norm(model.parameters(), params.max_grad_norm)
+            # nn.utils.clip_grad_norm(model.parameters(), params.max_grad_norm)
             optimizer.step()
 
         # finish, print:
-        if episode % params.save_interval ==0:
+        if episode % params.save_interval == 0:
             save_checkpoint(params.save_path, episode, model, optimizer)
-        print('episode',episode,'av_reward',av_reward/float(cum_done), 'total loss', loss)
+        print('episode', episode, 'av_reward', av_reward / float(cum_done), 'total loss', total_loss)
         memory.clear()
+
 
 def mkdir(base, name):
     path = os.path.join(base, name)

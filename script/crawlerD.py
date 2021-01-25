@@ -3,20 +3,19 @@ import torch
 import torch.optim as optim
 from torch.autograd import Variable
 import gym
-
+#import crawler.register_all_env
+#import rospy
 from Training import *
-from ACNet import acNet, load_checkpoint, Shared_obs_stats
+import pybullet_envs
+from ACNet import acNetCell, load_checkpoint, Shared_obs_stats
 
-import crawler.register_all_env
-import rospy
 
-# import pybullet_envs
 
 #config param
 parser = argparse.ArgumentParser(description = "crawlerD");
 
 ## env
-parser.add_argument('--num_steps',     type=int,   default=2048,    help='Input length to the network for training');
+parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input length to the network for training');
 parser.add_argument('--batch_size',     type=int,   default=64,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
@@ -59,13 +58,14 @@ parser.add_argument('--mode',           type=str, help='train test demo')
 params = parser.parse_args();
 
 def main():
-    rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
+    #rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
     env = gym.make(params.env_name)
-
+    env.render()
+    device = torch.device('cuda', index=0) if torch.cuda.is_available() else torch.device('cpu')
     torch.manual_seed(params.seed)
     num_inputs = env.observation_space.shape[0]
     num_outputs = env.action_space.shape[0]
-    model = acNet(num_inputs, num_outputs, params.hiddensize, params.lstmhiddensize)
+    model = acNetCell(num_inputs, num_outputs, params.hiddensize, params.lstmhiddensize).to(device)
     shared_obs_stats = Shared_obs_stats(num_inputs)
     optimizer = optim.Adam(model.parameters(), lr=params.lr, weight_decay = params.weight_decay)
 
@@ -86,28 +86,27 @@ def main():
         print('Number of GPUs:', torch.cuda.device_count())
         print('Save path:', params.save_path)
 
-        train(env, model, optimizer, shared_obs_stats, params)
+        train(env, model, optimizer, shared_obs_stats, device, params)
 
 
     #test mode
     elif params.mode == 'test':
         state = env.reset()
         state = Variable(torch.Tensor(state).unsqueeze(0))
-        hx = torch.zeros((1, params.lstmhiddensize))
-        cx = torch.zeros((1, params.lstmhiddensize))
+        hx = torch.zeros((1, params.lstmhiddensize)).unsqueeze(0).to(device)
+        cx = torch.zeros((1, params.lstmhiddensize)).unsqueeze(0).to(device)
         load_checkpoint(params.save_path, params.initial_model, model, optimizer)
         model.eval()
-        while (True):
-            cum_reward = 0
-            for step in range(params.num_steps):
+        with torch.no_grad():
+            while(True):
+                cum_reward = 0
                 shared_obs_stats.observes(state)
-                state = shared_obs_stats.normalize(state)
-                mu, sigma, v, hx, cx = model(state, hx, cx)
-                action = (mu + torch.exp(sigma) * Variable(torch.randn(mu.size())))
-                log_prob = -0.5 * ((action - mu) / torch.exp(sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - sigma
-                log_prob = log_prob.sum(-1, keepdim=True)
-                env_action = action.data.squeeze().numpy()
+                state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
+                mu, sigma, v, hx, cx = model.single_forward(state, hx, cx)
+                action = (mu + torch.exp(sigma) * Variable(torch.randn(mu.size()).to(device)))
+                env_action = action.data.squeeze().cpu().numpy()
                 state, reward, done, _ = env.step(env_action)
+                print(reward)
                 cum_reward += reward
                 # reward = max(min(reward, 1), -1)
                 state = Variable(torch.Tensor(state).unsqueeze(0))
