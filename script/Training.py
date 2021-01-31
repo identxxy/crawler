@@ -25,8 +25,9 @@ class ReplayMemory(object):
 
     def push(self, events):
         # Events = list(zip(*events))
-        self.memory.append(map(lambda x: torch.cat([torch.repeat_interleave(torch.zeros_like(x[0]),(1000-len(x)),dim = 0),
-                                                    torch.cat(x, 0)],0), events))
+        #self.memory.append(map(lambda x: torch.cat([torch.repeat_interleave(torch.zeros_like(x[0]),(1000-len(x)),dim = 0),
+                                                    #torch.cat(x, 0)],0), events))
+        self.memory.append(map(lambda x: torch.cat(x, 0), events))                                            
         self.load += len(events[1])
         self.batchsize += 1
         # if len(self.memory)>self.capacity:
@@ -81,7 +82,7 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                 #print(state.shape)
                 model = model.to(device)
                 with torch.no_grad():
-                    mu, sigma, v, hx, cx = model.single_forward(state, hx, cx)
+                    mu, sigma, v, hx = model.single_forward(state, hx)
                 # h.append(hx)
                 # c.append(cx)
                 action = (mu + torch.exp(sigma) * Variable(torch.randn(mu.size()).to(device)))
@@ -105,7 +106,7 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                     episode_length = 0
                     state = env.reset()
                 state = Variable(torch.Tensor(state).unsqueeze(0))
-                if step >= params.max_episode_length-1:
+                if done:       #step >= params.max_episode_length-1:
                     break
 
             # one last step
@@ -138,7 +139,8 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
             # new probas
             hx = torch.zeros((memory.batchsize, params.lstmhiddensize)).unsqueeze(0).to(device)
             cx = torch.zeros((memory.batchsize, params.lstmhiddensize)).unsqueeze(0).to(device)
-            Mu, Sigma, V_pred = model(batch_states, hx, cx)  # size: length * batch * sigma_size
+            Mu, Sigma, V_pred = model(batch_states, hx)  # size: length * batch * sigma_size
+            #Sigma = Sigma.expand_as(Mu)
 
             log_probs = -0.5 * ((batch_actions - Mu) / torch.exp(Sigma)).pow(2) - 0.5 * math.log(2 * math.pi) - Sigma
             log_probs = log_probs.sum(-1, keepdim=True)
@@ -165,19 +167,19 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
             # gradient descent step
             total_loss = (loss_clip + loss_value + loss_ent)
 
-            loss = torch.square(log_probs - torch.full_like(batch_logprobs, 0)).mean() + torch.square(
-                V_pred - torch.full_like(batch_returns, 1.0)).mean()
+            #loss = torch.square(log_probs - torch.full_like(batch_logprobs, 0)).mean() + torch.square(
+                #V_pred - torch.full_like(batch_returns, 1.0)).mean()
 
             #print(loss)
             optimizer.zero_grad()
-            total_loss.backward()
+            total_loss.backward(retain_graph = True)
             #loss.backward()
             # nn.utils.clip_grad_norm(model.parameters(), params.max_grad_norm)
             optimizer.step()
 
         # finish, print:
         if episode % params.save_interval == 0:
-            save_checkpoint(params.save_path, episode, model, optimizer)
+            save_checkpoint(params.save_path, episode, model, optimizer, shared_obs_stats)
         print('episode', episode, 'av_reward', av_reward / float(cum_done), 'total loss', total_loss)
         memory.clear()
 

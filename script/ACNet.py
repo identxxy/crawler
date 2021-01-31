@@ -43,22 +43,22 @@ class acNetCell(nn.Module):
 
         self.hidden = []
         for i in range(len(hidden_size)-1):
-            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]).cuda())
+            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]))
             #self.hidden.append(nn.BatchNorm1d(hidden_size[i + 1]))
             #self.hidden.append(nn.ReLU())
 
 
 
-        self.lstm = nn.LSTM(hidden_size[-1], lstm_hidden_size, batch_first=False)
-        #self.critic_linear = nn.Sequential(nn.Linear(lstm_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
-        self.critic_linear = torch.nn.Parameter(torch.zeros(1, num_actions))
+        self.lstm = nn.GRU(hidden_size[-1], lstm_hidden_size, batch_first=False)
+        self.critic_linear = nn.Sequential(nn.Linear(lstm_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
         self.actor_linear = nn.Linear(lstm_hidden_size, 60)
         self.mu_linear = nn.Linear(60, num_actions)
-        self.sigma_linear = nn.Linear(60, num_actions)
+        #self.sigma_linear = nn.Linear(60, num_actions)
+        self.sigma_linear = torch.nn.Parameter(torch.zeros(1, num_actions))
 
 
 
-    def forward(self, x, hx, cx):
+    def forward(self, x, hx):
 
         x = torch.tanh(self.linear(x))
 
@@ -67,14 +67,14 @@ class acNetCell(nn.Module):
 
         #nn.utils.rnn.pack_padded_sequence(x, None, batch_first=False)
 
-        x, (hx, cx) = self.lstm(x, (hx, cx))
+        x, hx = self.lstm(x, hx)
         #x,_ = nn.utils.rnn.pad_packed_sequence(x, batch_first=False)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)
-        sigma = self.sigma_linear(actor)
+        sigma = self.sigma_linear
         return mu, sigma, self.critic_linear(x)
 
-    def single_forward(self, x, hx, cx):
+    def single_forward(self, x, hx):
         x = torch.tanh(self.linear(x))
         #print(hx.shape)
         #print(x.shape)
@@ -83,30 +83,33 @@ class acNetCell(nn.Module):
             #print(x)
             x = torch.tanh(layer(x))
 
-        x,(hx, cx) = self.lstm(x, (hx, cx))
+        x,hx = self.lstm(x, hx)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)
-        sigma = self.sigma_linear(actor)
-        return mu, sigma, self.critic_linear, hx, cx
+        sigma = self.sigma_linear
+        return mu, sigma, self.critic_linear(x), hx
 
 
-def save_checkpoint(save_path, episode, model, optimizer):
+def save_checkpoint(save_path, episode, model, optimizer, obs):
     if save_path == None:
         return
     save_path = '%s/%d.pt'%(save_path,episode)
     state_dict = {'model_state_dict': model.state_dict(),
-                  'optimizer_state_dict': optimizer.state_dict()}
+                  'optimizer_state_dict': optimizer.state_dict(),
+                  'obs_state_dict': obs.save()}
 
     torch.save(state_dict, save_path)
 
     print(f'Model saved to ==> {save_path}')
 
 
-def load_checkpoint(save_path, episode, model, optimizer):
+def load_checkpoint(save_path, episode, model, optimizer,obs):
     save_path = '%s/%d.pt' % (save_path, episode)
-    state_dict = torch.load(save_path)
+    state_dict = torch.load(save_path, map_location=torch.device('cpu'))
     model.load_state_dict(state_dict['model_state_dict'])
     optimizer.load_state_dict(state_dict['optimizer_state_dict'])
+    obs.load(state_dict['obs_state_dict'])
+
 
     print(f'Model loaded from <== {save_path}')
 
@@ -145,3 +148,14 @@ class Shared_obs_stats():
         obs_mean = Variable(self.mean.unsqueeze(0).expand_as(inputs))
         obs_std = Variable(torch.sqrt(self.var).unsqueeze(0).expand_as(inputs))
         return torch.clamp((inputs-obs_mean)/obs_std, -5., 5.)
+
+    def save(self):
+        return (self.n, self.mean, self.mean_diff, self.var)
+
+    def load(self, input):
+        n, mean, mean_diff, var = input
+        print(input)
+        self.n +=  n
+        self.mean += mean
+        self.mean_diff += mean_diff 
+        self.var += var 

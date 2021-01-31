@@ -33,14 +33,16 @@
                 </geometry>
             </collision>
         </link>
+
         <gazebo reference="leg1_${suffix}">
+            <xacro:leg_friction_property/>
             <material>Gazebo/Grey</material>
         </gazebo>
 
         <joint name="joint2_${suffix}" type="revolute">
             <parent link="leg1_${suffix}"/>
             <child link="leg2_${suffix}"/>
-            <origin xyz="${L_up_con_leg} 0 0" rpy="${-pi/2} 0 0"/>
+            <origin xyz="${L_up_con_leg} 0 0" rpy="${-pi/2} ${pi/8} 0"/>
             <xacro:joint2_property/>
         </joint>
 
@@ -75,6 +77,7 @@
             </collision>
         </link>
         <gazebo reference="leg2_${suffix}">
+            <xacro:leg_friction_property/>
             <material>Gazebo/Grey</material>
         </gazebo>
 
@@ -116,13 +119,14 @@
             </collision>
         </link>
         <gazebo reference="leg3_${suffix}">
+            <xacro:leg_friction_property/>
             <material>Gazebo/Grey</material>
         </gazebo>
 
         <joint name="joint4_${suffix}" type="revolute">
             <parent link="leg3_${suffix}"/>
             <child link="leg4_${suffix}"/>
-            <origin xyz="${L_up_con_leg} 0 0" rpy="0 0 0"/>
+            <origin xyz="${L_up_con_leg} 0 0" rpy="0 0 ${pi/3}"/>
             <xacro:joint4_property/>
         </joint>
 
@@ -158,6 +162,7 @@
             </collision>
         </link>
         <gazebo reference="leg4_${suffix}">
+            <xacro:leg_friction_property/>
             <material>Gazebo/Orange</material>
         </gazebo>
 
@@ -186,18 +191,9 @@
                 </geometry>
             </collision>
         </link>
+
         <gazebo reference="foot_${suffix}">
-            <collision>
-                <surface>
-                    <contact>
-                        <ode>
-                            <kp>5e8</kp>
-                            <kd>0.5</kd>
-                            <min_depth>0.01</min_depth>
-                        </ode>
-                    </contact>
-                </surface>
-            </collision>
+            <xacro:foot_property/>
             <material>Gazebo/Black</material>
         </gazebo>
 

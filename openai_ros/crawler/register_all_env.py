@@ -9,3 +9,8 @@ register(
         id='CrawlerStandupEnv-v0',
         entry_point='crawler.standup_env:StandupTaskEnv'
     )
+
+register(
+        id='CrawlerWalkXEnv-v0',
+        entry_point='crawler.walk_forward:WalkXTaskEnv'
+    )

@@ -3,8 +3,8 @@ import torch
 import torch.optim as optim
 from torch.autograd import Variable
 import gym
-#import crawler.register_all_env
-#import rospy
+import crawler.register_all_env
+import rospy
 from Training import *
 import pybullet_envs
 from ACNet import acNetCell, load_checkpoint, Shared_obs_stats
@@ -19,7 +19,7 @@ parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input 
 parser.add_argument('--batch_size',     type=int,   default=64,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
-parser.add_argument('--env_name',      type=str,   default="CrawlerStandupEnv-v0", help='env_name');
+parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v0", help='env_name');
 
 ## Training details
 parser.add_argument('--save_interval',  type=int,   default=20,     help='Test and save every [test_interval] epochs');
@@ -58,9 +58,9 @@ parser.add_argument('--mode',           type=str, help='train test demo')
 params = parser.parse_args();
 
 def main():
-    #rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
+    rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
     env = gym.make(params.env_name)
-    env.render()
+    #env.render()
     device = torch.device('cuda', index=0) if torch.cuda.is_available() else torch.device('cpu')
     torch.manual_seed(params.seed)
     num_inputs = env.observation_space.shape[0]
@@ -77,7 +77,7 @@ def main():
             os.makedirs(params.save_path)
 
         if params.cont_train:
-            load_checkpoint(params.save_path, params.initial_model, model, optimizer)
+            load_checkpoint(params.save_path, params.initial_model, model, optimizer, shared_obs_stats)
 
 
 
@@ -102,7 +102,7 @@ def main():
                 cum_reward = 0
                 shared_obs_stats.observes(state)
                 state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
-                mu, sigma, v, hx, cx = model.single_forward(state, hx, cx)
+                mu, sigma, v, hx= model.single_forward(state, hx)
                 action = (mu + torch.exp(sigma) * Variable(torch.randn(mu.size()).to(device)))
                 env_action = action.data.squeeze().cpu().numpy()
                 state, reward, done, _ = env.step(env_action)

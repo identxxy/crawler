@@ -6,8 +6,10 @@ import rospy
 import rospkg
 import rosparam
 import os
+import math
 
 from tf.transformations import euler_from_quaternion
+from gazebo_msgs.srv import GetLinkState
 
 def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_file_name):
 
@@ -22,24 +24,32 @@ def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_
         rosparam.upload_params(ns,params)
 
 
-class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
+class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
     def __init__(self):
         # Load all the params first
-        LoadYamlFileParamsTest("crawler", "config", "standup_param.yaml")
+        LoadYamlFileParamsTest("crawler", "config", "walk_forwad_param.yaml")
         # Variables that we retrieve through the param server, loded when launch training launch.
-        self.reward_height_b = rospy.get_param('/crawler/reward_height_b')
+        self.reward_x_vel = rospy.get_param('/crawler/reward_x_vel')
+        self.reward_height_thd = rospy.get_param('/crawler/reward_height_thd')
         self.reward_height_k = rospy.get_param('/crawler/reward_height_k')
+        self.reward_ori_k = rospy.get_param('/crawler/reward_ori_k')
+
+        self.punish_knee_thd = rospy.get_param('/crawler/punish_knee_thd')
+        self.punish_knee= rospy.get_param('/crawler/punish_knee')
+
         self.effort_penalty = rospy.get_param('/crawler/effort_penalty')
         self.effort_max = rospy.get_param('/crawler/effort_max')
         self.epoch_steps = rospy.get_param('/crawler/epoch_steps')
         self.running_step = rospy.get_param('/crawler/running_step')
+        rospy.wait_for_service('gazebo/get_link_state')
+        self.get_link_state = rospy.ServiceProxy('gazebo/get_link_state', GetLinkState)
         # Construct the RobotEnv so we know the dimension of cmd
-        super(StandupTaskEnv, self).__init__()
+        super(WalkXTaskEnv, self).__init__()
         # Only variable needed to be set here
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16, 1), dtype=np.float32)
         self._init_env_variables()
         
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(61, 1), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(60, 1), dtype=np.float32)
         
         rospy.logdebug("END init TestTaskEnv")
 
@@ -112,8 +122,17 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Return the reward based on the observations given
         """
-        reward = (self.global_pos.position.z - self.reward_height_b) * self.reward_height_k
+        reward = self.global_vel.linear.x * self.reward_x_vel
+        reward += self.reward_ori_k * math.cos(self.roll) * math.cos(self.pitch)
+        if self.global_pos.position.z < self.reward_height_thd: # punishment
+            reward += self.reward_height_k * (self.global_pos.position.z - self.reward_height_thd)
         reward -= self.effort_penalty * sum(map(abs, self.joints.effort)) / self.effort_max
+        knee_land_cnt = 0
+        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_B', None).link_state.pose.position.z < self.punish_knee_thd
+        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_F', None).link_state.pose.position.z < self.punish_knee_thd
+        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_L', None).link_state.pose.position.z < self.punish_knee_thd
+        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
+        reward -= knee_land_cnt * self.punish_knee
         return reward
         
     # Internal TaskEnv Methods

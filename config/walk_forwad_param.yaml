@@ -1,0 +1,18 @@
+crawler: #namespace
+
+    #environment variables
+    reward_x_vel: 1 
+    reward_height_thd: 0.4
+    reward_height_k: 1
+    reward_ori_k: 0.5
+
+    punish_knee: 1
+    punish_knee_thd: 0.05
+
+    effort_penalty: 0.05    # penalty on effort
+    effort_max: 100     # defined in urdf/crawler.xacro joint[1-4]_property
+    
+    epoch_steps: 128
+    running_step: 0.05 # amount of time the control will be executed
+    
+    
