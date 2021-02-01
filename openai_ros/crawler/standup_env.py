@@ -39,7 +39,7 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16, 1), dtype=np.float32)
         self._init_env_variables()
         
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(61, 1), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(60, 1), dtype=np.float32)
         
         rospy.logdebug("END init TestTaskEnv")
 

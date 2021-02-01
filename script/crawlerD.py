@@ -23,7 +23,7 @@ parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v0",
 
 ## Training details
 parser.add_argument('--save_interval',  type=int,   default=20,     help='Test and save every [test_interval] epochs');
-parser.add_argument('--time_horizon',      type=int,   default=500,    help='Maximum number of epochs');
+parser.add_argument('--time_horizon',      type=int,   default=2000,    help='Maximum number of epochs');
 parser.add_argument('--max_episode_length',      type=int,   default=1000,    help='Maximum number of episodes');
 
 ## Optimizer
