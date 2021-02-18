@@ -49,7 +49,7 @@ parser.add_argument('--save_path',      type=str,   default="exp", help='Path fo
 ## Model definition
 parser.add_argument('--inputsize',         type=int,   default=61,     help='inputsize');
 parser.add_argument('--hiddensize', nargs='+', type=int,   default = [100, 100, 100],  help='hiddensize')
-parser.add_argument('--lstmhiddensize',   type=int,   default=100,  help='Embedding size in the LSTM layer');
+parser.add_argument('--gruhiddensize',   type=int,   default=100,  help='Embedding size in the gru layer');
 parser.add_argument('--outputsize',           type=int,   default=12,    help='outputsize');
 
 ## For test only
@@ -65,7 +65,7 @@ def main():
     torch.manual_seed(params.seed)
     num_inputs = env.observation_space.shape[0]
     num_outputs = env.action_space.shape[0]
-    model = acNetCell(num_inputs, num_outputs, params.hiddensize, params.lstmhiddensize).to(device)
+    model = acNetCell(num_inputs, num_outputs, params.hiddensize, params.gruhiddensize).to(device)
     shared_obs_stats = Shared_obs_stats(num_inputs)
     optimizer = optim.Adam(model.parameters(), lr=params.lr, weight_decay = params.weight_decay)
 
@@ -93,8 +93,8 @@ def main():
     elif params.mode == 'test':
         state = env.reset()
         state = Variable(torch.Tensor(state).unsqueeze(0))
-        hx = torch.zeros((1, params.lstmhiddensize)).unsqueeze(0).to(device)
-        cx = torch.zeros((1, params.lstmhiddensize)).unsqueeze(0).to(device)
+        hx = torch.zeros((1, params.gruhiddensize)).unsqueeze(0).to(device)
+        cx = torch.zeros((1, params.gruhiddensize)).unsqueeze(0).to(device)
         load_checkpoint(params.save_path, params.initial_model, model, optimizer)
         model.eval()
         with torch.no_grad():

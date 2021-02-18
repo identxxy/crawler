@@ -10,9 +10,9 @@ def weights_init_uniform(m):
         torch.nn.init.constant_(m.bias.data, 0.1)
 
 class acNet(nn.Module):
-    def __init__(self, num_inputs, num_actions, hidden_size, lstm_hidden_size):
+    def __init__(self, num_inputs, num_actions, hidden_size, gru_hidden_size):
         super(acNet, self).__init__()
-        self.cell = acNetCell(num_inputs, num_actions, hidden_size, lstm_hidden_size)
+        self.cell = acNetCell(num_inputs, num_actions, hidden_size, gru_hidden_size)
         self.cell.apply(weights_init_uniform)
 
     def single_forward(self, x, hx, cx):
@@ -36,7 +36,7 @@ class acNet(nn.Module):
 
 
 class acNetCell(nn.Module):
-    def __init__(self, num_inputs, num_actions, hidden_size, lstm_hidden_size):
+    def __init__(self, num_inputs, num_actions, hidden_size, gru_hidden_size):
         super(acNetCell, self).__init__()
 
         self.linear = nn.Linear(num_inputs, hidden_size[0])
@@ -49,9 +49,9 @@ class acNetCell(nn.Module):
 
 
 
-        self.lstm = nn.GRU(hidden_size[-1], lstm_hidden_size, batch_first=False)
-        self.critic_linear = nn.Sequential(nn.Linear(lstm_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
-        self.actor_linear = nn.Linear(lstm_hidden_size, 60)
+        self.gru = nn.GRU(hidden_size[-1], gru_hidden_size, batch_first=False)
+        self.critic_linear = nn.Sequential(nn.Linear(gru_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
+        self.actor_linear = nn.Linear(gru_hidden_size, 60)
         self.mu_linear = nn.Linear(60, num_actions)
         #self.sigma_linear = nn.Linear(60, num_actions)
         self.sigma_linear = torch.nn.Parameter(torch.zeros(1, num_actions))
@@ -67,7 +67,7 @@ class acNetCell(nn.Module):
 
         #nn.utils.rnn.pack_padded_sequence(x, None, batch_first=False)
 
-        x, hx = self.lstm(x, hx)
+        x, hx = self.gru(x, hx)
         #x,_ = nn.utils.rnn.pad_packed_sequence(x, batch_first=False)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)
@@ -83,7 +83,7 @@ class acNetCell(nn.Module):
             #print(x)
             x = torch.tanh(layer(x))
 
-        x,hx = self.lstm(x, hx)
+        x,hx = self.gru(x, hx)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)
         sigma = self.sigma_linear

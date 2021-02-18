@@ -69,8 +69,8 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
             av_reward = 0
             cum_reward = 0
             cum_done = 0
-            hx = torch.zeros((params.lstmhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
-            cx = torch.zeros((params.lstmhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
+            hx = torch.zeros((params.gruhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
+            cx = torch.zeros((params.gruhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
 
             # n steps loops
             for step in range(params.num_steps):
@@ -137,8 +137,8 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
 
         for k in range(params.num_epoch):
             # new probas
-            hx = torch.zeros((memory.batchsize, params.lstmhiddensize)).unsqueeze(0).to(device)
-            cx = torch.zeros((memory.batchsize, params.lstmhiddensize)).unsqueeze(0).to(device)
+            hx = torch.zeros((memory.batchsize, params.gruhiddensize)).unsqueeze(0).to(device)
+            cx = torch.zeros((memory.batchsize, params.gruhiddensize)).unsqueeze(0).to(device)
             Mu, Sigma, V_pred = model(batch_states, hx)  # size: length * batch * sigma_size
             #Sigma = Sigma.expand_as(Mu)
 
