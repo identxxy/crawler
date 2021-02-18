@@ -123,7 +123,7 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         Return the reward based on the observations given
         """
         reward = self.global_vel.linear.x * self.reward_x_vel
-        reward += self.reward_ori_k * math.cos(self.roll) * math.cos(self.pitch)
+        reward -= self.reward_ori_k * ( 1 - math.cos(self.roll) * math.cos(self.pitch) )
         if self.global_pos.position.z < self.reward_height_thd: # punishment
             reward += self.reward_height_k * (self.global_pos.position.z - self.reward_height_thd)
         reward -= self.effort_penalty * sum(map(abs, self.joints.effort)) / self.effort_max
