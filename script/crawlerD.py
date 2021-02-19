@@ -95,7 +95,7 @@ def main():
         state = Variable(torch.Tensor(state).unsqueeze(0))
         hx = torch.zeros((1, params.gruhiddensize)).unsqueeze(0).to(device)
         cx = torch.zeros((1, params.gruhiddensize)).unsqueeze(0).to(device)
-        load_checkpoint(params.save_path, params.initial_model, model, optimizer)
+        load_checkpoint(params.save_path, params.initial_model, model, optimizer, shared_obs_stats)
         model.eval()
         with torch.no_grad():
             while(True):
