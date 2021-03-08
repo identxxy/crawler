@@ -3,4 +3,5 @@ training_results/
 */__pycache__
 *.py[cod]
 *.pt
+*.sh
 !.gitignore

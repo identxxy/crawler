@@ -93,7 +93,6 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                 values.append(v)
                 env_action = torch.tanh(action).data.squeeze().cpu().numpy()
                 state, reward, done, _ = env.step(env_action)
-                done = (done or episode_length >= params.max_episode_length)
                 cum_reward += reward
                 # reward = max(min(reward, 1), -1)
                 rewards.append(reward)

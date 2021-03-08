@@ -30,6 +30,7 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         LoadYamlFileParamsTest("crawler", "config", "walk_forwad_param.yaml")
         # Variables that we retrieve through the param server, loded when launch training launch.
         self.reward_x_vel = rospy.get_param('/crawler/reward_x_vel')
+        self.reward_y_vel = rospy.get_param('/crawler/reward_y_vel')
         self.reward_height_thd = rospy.get_param('/crawler/reward_height_thd')
         self.reward_height_k = rospy.get_param('/crawler/reward_height_k')
         self.reward_ori_k = rospy.get_param('/crawler/reward_ori_k')
@@ -122,7 +123,7 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Return the reward based on the observations given
         """
-        reward = self.global_vel.linear.x * self.reward_x_vel
+        reward = self.global_vel.linear.x * self.reward_x_vel + self.global_vel.linear.y * self.reward_y_vel
         reward -= self.reward_ori_k * ( 1 - math.cos(self.roll) * math.cos(self.pitch) )
         if self.global_pos.position.z < self.reward_height_thd: # punishment
             reward += self.reward_height_k * (self.global_pos.position.z - self.reward_height_thd)

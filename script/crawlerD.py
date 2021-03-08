@@ -15,7 +15,7 @@ from ACNet import acNetCell, load_checkpoint, Shared_obs_stats
 parser = argparse.ArgumentParser(description = "crawlerD");
 
 ## env
-parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input length to the network for training');
+parser.add_argument('--num_steps',     type=int,   default=8192,    help='Input length to the network for training');
 parser.add_argument('--batch_size',     type=int,   default=64,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
@@ -37,7 +37,7 @@ parser.add_argument('--num_epoch',      type=int,   default=10,    help='number 
 parser.add_argument('--gamma',             type=float, default=0.99,  help='gamma');
 parser.add_argument('--gae_param',             type=float, default=0.95,  help='gae_param');
 parser.add_argument('--clip',             type=float, default=0.2,  help='clip');
-parser.add_argument('--ent_coeff',             type=float, default=0.01,  help='ent_coeff');
+parser.add_argument('--ent_coeff',             type=float, default=1e-4,  help='ent_coeff');
 parser.add_argument('--max_grad_norm',             type=float, default=0.5,  help='max_grad_norm');
 parser.add_argument('--seed',             type=float, default=1,  help='seed');
 
@@ -48,9 +48,8 @@ parser.add_argument('--save_path',      type=str,   default="exp", help='Path fo
 
 ## Model definition
 parser.add_argument('--inputsize',         type=int,   default=61,     help='inputsize');
-parser.add_argument('--hiddensize', nargs='+', type=int,   default = [100, 100, 100],  help='hiddensize')
+parser.add_argument('--hiddensize', nargs='+', type=int,   default = [300, 200, 100],  help='hiddensize')
 parser.add_argument('--gruhiddensize',   type=int,   default=100,  help='Embedding size in the gru layer');
-parser.add_argument('--outputsize',           type=int,   default=12,    help='outputsize');
 
 ## For test only
 parser.add_argument('--mode',           type=str, help='train test demo')
