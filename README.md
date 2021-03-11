@@ -9,9 +9,9 @@ This is a simple 4-leg robot simulation model and integrated with reinforcement 
 - ubuntu 20.04 (with only python3)
 - ROS-Noetic ([Installation guide](http://wiki.ros.org/noetic/Installation/Ubuntu))
     - Gazebo (contained in the `ros-noetic-desktop-full` in the above guide)
-    - effort controller `sudo apt install ros-neotic-effort-controller`
-    - velocity controller `sudo apt install ros-neotic-velocity-controller`
-    - position controller `sudo apt install ros-neotic-position-controller`
+    - effort controller `sudo apt install ros-noetic-effort-controller`
+    - velocity controller `sudo apt install ros-noetic-velocity-controller`
+    - position controller `sudo apt install ros-noetic-position-controller`
 - Gym version 0.17.2 `pip install gym`
 
 Remember follow [this guide](http://wiki.ros.org/ROS/Tutorials/InstallingandConfiguringROSEnvironment) to create a ROS workspace. e.g. `~/catkin_ws`
