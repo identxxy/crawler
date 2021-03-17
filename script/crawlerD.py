@@ -72,13 +72,16 @@ def main():
 
     #train mode
     if params.mode == 'train':
-        rewards_history = []
+        plot_dict = {
+            'reward': [],
+            'loss': []
+        }
 
         if not (os.path.exists(params.save_path)):
             os.makedirs(params.save_path)
 
         if params.cont_train:
-            load_checkpoint(params.save_path, params.initial_model, model, optimizer, shared_obs_stats, rewards_history)
+            load_checkpoint(params.save_path, params.initial_model, model, optimizer, shared_obs_stats, plot_dict)
 
 
 
@@ -87,7 +90,7 @@ def main():
         print('Number of GPUs:', torch.cuda.device_count())
         print('Save path:', params.save_path)
 
-        train(env, model, optimizer, shared_obs_stats, device, params, rewards_history)
+        train(env, model, optimizer, shared_obs_stats, device, params, plot_dict)
 
 
     #test mode

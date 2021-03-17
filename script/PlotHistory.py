@@ -10,16 +10,21 @@ params = parser.parse_args()
 def main():
     filename = params.filename
     state_dict = load(filename)
-    rewards_history = state_dict['rewards_history']
+    plot_dict = state_dict['plot_dict']
 
-
+    reward = plot_dict['reward']
+    loss = plot_dict['loss']
     fig = plt.figure()
-    ax = fig.add_subplot(111)
-    plt.plot(np.arange(1, len(rewards_history)+1), rewards_history)
-    plt.ylabel('Score')
+    ax = fig.add_subplot(211)
+    plt.plot(np.arange(1, len(reward)+1), reward)
+    plt.ylabel('Reward')
+    plt.xlabel('Episode #')
+    
+    ax = fig.add_subplot(212)
+    plt.plot(np.arange(1, len(loss)+1), loss)
+    plt.ylabel('Loss')
     plt.xlabel('Episode #')
     plt.show()
-    
 
 if __name__ == '__main__':
     main()

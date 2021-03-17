@@ -44,7 +44,7 @@ class ReplayMemory(object):
         return data
 
 
-def train(env, model, optimizer, shared_obs_stats, device, params, rewards_history):
+def train(env, model, optimizer, shared_obs_stats, device, params, plot_dict):
     memory = ReplayMemory(params.num_steps)
     state = env.reset()
     state = Variable(torch.Tensor(state).unsqueeze(0))
@@ -181,8 +181,9 @@ def train(env, model, optimizer, shared_obs_stats, device, params, rewards_histo
 
         # finish, print:
         if episode % params.save_interval == 0:
-            rewards_history.append(av_reward / float(cum_done))
-            save_checkpoint(params.save_path, episode, model, optimizer, shared_obs_stats, rewards_history)
+            plot_dict['reward'].append(av_reward / float(cum_done))
+            plot_dict['loss'].append(total_loss)
+            save_checkpoint(params.save_path, episode, model, optimizer, shared_obs_stats, plot_dict)
         print('episode', episode, 'av_reward', av_reward / float(cum_done), 'total loss', total_loss)
         memory.clear()
 
