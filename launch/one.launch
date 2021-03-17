@@ -1,0 +1,13 @@
+<launch>
+  <arg name="number" />
+  <arg name="control_type" />
+  <include file="$(find crawler)/launch/spawn.launch">
+    <arg name="number" value="$(arg number)" />
+    <arg name="ypos" value="$(eval arg('number') * 10)" />
+  </include>
+
+  <include file="$(find crawler)/launch/control.launch">
+    <arg name="number" value="$(arg number)" />
+    <arg name="control_type" value="$(arg control_type)"/>
+  </include>
+</launch>

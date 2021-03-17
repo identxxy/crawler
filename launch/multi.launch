@@ -1,0 +1,14 @@
+<launch>
+    <arg name="control_type"/>
+    <arg name="number"/>
+    <group ns="crawler_$(arg number)">
+        <include file="$(find crawler)/launch/one.launch">
+            <arg name="control_type" value="$(arg control_type)"/>
+            <arg name="number" value="$(arg number)" />
+        </include>
+    </group>
+    <include file="$(find crawler)/launch/multi.launch" if="$(eval arg('number')-1>=0)">
+        <arg name="control_type" value="$(arg control_type)"/>
+        <arg name="number" value="$(eval arg('number')-1)" />
+    </include>
+</launch>

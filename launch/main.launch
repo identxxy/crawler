@@ -22,14 +22,9 @@
     <arg name="world_name" value="$(find crawler)/worlds/$(arg world_name).world"/>
   </include>
 
-  <!-- Load the URDF into the ROS Parameter Server -->
-  <!-- <include file="$(find crawler)/launch/spawn.launch">
-    <arg name="number" value="$(arg number)" />
-  </include> -->
-<!-- 
-  <include file="$(find crawler)/launch/control.launch">
+  <include file="$(find crawler)/launch/multi.launch">
     <arg name="control_type" value="$(arg control_type)"/>
-    <arg name="number" value="$(arg number)" />
-  </include> -->
+    <arg name="number" value="$(eval arg('number')-1)" />
+  </include>
 
 </launch>
