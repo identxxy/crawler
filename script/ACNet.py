@@ -90,25 +90,27 @@ class acNetCell(nn.Module):
         return mu, sigma, self.critic_linear(x), hx
 
 
-def save_checkpoint(save_path, episode, model, optimizer, obs):
+def save_checkpoint(save_path, episode, model, optimizer, obs, rewards_history):
     if save_path == None:
         return
     save_path = '%s/%d.pt'%(save_path,episode)
     state_dict = {'model_state_dict': model.state_dict(),
                   'optimizer_state_dict': optimizer.state_dict(),
-                  'obs_state_dict': obs.save()}
+                  'obs_state_dict': obs.save(),
+                  'rewards_history': rewards_history}
 
     torch.save(state_dict, save_path)
 
     print(f'Model saved to ==> {save_path}')
 
 
-def load_checkpoint(save_path, episode, model, optimizer,obs):
+def load_checkpoint(save_path, episode, model, optimizer, obs, rewards_history):
     save_path = '%s/%d.pt' % (save_path, episode)
     state_dict = torch.load(save_path, map_location=torch.device('cpu'))
     model.load_state_dict(state_dict['model_state_dict'])
     optimizer.load_state_dict(state_dict['optimizer_state_dict'])
     obs.load(state_dict['obs_state_dict'])
+    rewards_history = state_dict['rewards_history']
 
 
     print(f'Model loaded from <== {save_path}')

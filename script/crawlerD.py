@@ -48,6 +48,7 @@ parser.add_argument('--save_path',      type=str,   default="exp", help='Path fo
 
 ## Model definition
 parser.add_argument('--inputsize',         type=int,   default=61,     help='inputsize');
+parser.add_argument('--robot_number',      type=int,   default=1,     help='robot number');
 parser.add_argument('--hiddensize', nargs='+', type=int,   default = [300, 200, 100],  help='hiddensize')
 parser.add_argument('--gruhiddensize',   type=int,   default=100,  help='Embedding size in the gru layer');
 
@@ -58,7 +59,7 @@ params = parser.parse_args();
 
 def main():
     rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
-    env = gym.make(params.env_name)
+    env = gym.make(params.env_name, n=params.robot_number)
     #env.render()
     device = torch.device('cuda', index=0) if torch.cuda.is_available() else torch.device('cpu')
     torch.manual_seed(params.seed)
@@ -71,12 +72,13 @@ def main():
 
     #train mode
     if params.mode == 'train':
+        rewards_history = []
 
         if not (os.path.exists(params.save_path)):
             os.makedirs(params.save_path)
 
         if params.cont_train:
-            load_checkpoint(params.save_path, params.initial_model, model, optimizer, shared_obs_stats)
+            load_checkpoint(params.save_path, params.initial_model, model, optimizer, shared_obs_stats, rewards_history)
 
 
 
@@ -85,7 +87,7 @@ def main():
         print('Number of GPUs:', torch.cuda.device_count())
         print('Save path:', params.save_path)
 
-        train(env, model, optimizer, shared_obs_stats, device, params)
+        train(env, model, optimizer, shared_obs_stats, device, params, rewards_history)
 
 
     #test mode
