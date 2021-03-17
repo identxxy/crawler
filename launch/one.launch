@@ -3,6 +3,7 @@
   <arg name="control_type" />
   <include file="$(find crawler)/launch/spawn.launch">
     <arg name="number" value="$(arg number)" />
+    <!-- displacement settings -->
     <arg name="ypos" value="$(eval arg('number') * 10)" />
   </include>
 

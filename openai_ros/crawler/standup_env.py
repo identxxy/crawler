@@ -54,11 +54,12 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         of an episode.
         :return:
         """
-        self.roll = 0
-        self.pitch = 0
-        self.yaw = 0
-        self.cmd = np.zeros(len(self.publisher_list))
         self.steps = 0
+        self.cmd = np.zeros(self.n * 16)
+        for r in self.robots:
+            r.roll = 0
+            r.pitch = 0
+            r.yaw = 0
 
 
     def _set_action(self, action):
@@ -77,29 +78,34 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         MyRobotEnv API DOCS
         :return: observations
         """
-        joints, global_pos, global_vel = self.obs_joints()
-        orientation_q = global_pos.orientation
-        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
-        (self.roll, self.pitch, self.yaw) = euler_from_quaternion (orientation_list)
-        return np.concatenate([
-            joints.position,
-            joints.velocity,
-            joints.effort,
-            (
-                global_pos.position.x,
-                global_pos.position.y,
-                global_pos.position.z,
-                self.roll,
-                self.pitch,
-                self.yaw,
-                global_vel.linear.x,
-                global_vel.linear.y,
-                global_vel.linear.z,
-                global_vel.angular.x,
-                global_vel.angular.y,
-                global_vel.angular.z
-            )
-        ])
+        states = self.obs_states()
+        obs = np.zeros(60 * self.n, dtype=float)
+        for i in range(self.n):
+            r = self.robots[i]
+            joints, global_pos, global_vel = states[i]
+            orientation_q = global_pos.orientation
+            orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+            (r.roll, r.pitch, r.yaw) = euler_from_quaternion (orientation_list)
+            obs[60 * i: 60 * i + 60] = np.concatenate([
+                joints.position,
+                joints.velocity,
+                joints.effort,
+                (
+                    global_pos.position.x,
+                    global_pos.position.y,
+                    global_pos.position.z,
+                    r.roll,
+                    r.pitch,
+                    r.yaw,
+                    global_vel.linear.x,
+                    global_vel.linear.y,
+                    global_vel.linear.z,
+                    global_vel.angular.x,
+                    global_vel.angular.y,
+                    global_vel.angular.z
+                )
+            ])
+        return obs
 
     def _is_done(self, observations):
         """
@@ -112,9 +118,13 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Return the reward based on the observations given
         """
-        reward = (self.global_pos.position.z - self.reward_height_b) * self.reward_height_k
-        reward -= self.effort_penalty * sum(map(abs, self.joints.effort)) / self.effort_max
-        return reward
+        rewards = np.zeros(self.n, dtype=float)
+        for i in range(self.n):
+            r = self.robots[i]
+            reward = (r.global_pos.position.z - self.reward_height_b) * self.reward_height_k
+            reward -= self.effort_penalty * sum(map(abs, r.joints.effort)) / self.effort_max
+            rewards[i] = reward
+        return rewards
         
     # Internal TaskEnv Methods
 

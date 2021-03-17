@@ -9,18 +9,20 @@ from crawler.msg import RLExperimentInfo
 # https://github.com/openai/gym/blob/master/gym/core.py
 class RobotGazeboEnv(gym.Env):
 
-    def __init__(self, robot_name_space, controllers_list, reset_controls, start_init_physics_parameters=True, reset_world_or_sim="SIMULATION"):
+    def __init__(self, n, robot_name_spaces, controllers_list, reset_controls, start_init_physics_parameters=True, reset_world_or_sim="SIMULATION"):
 
         # To reset Simulations
         rospy.logdebug("START init RobotGazeboEnv")
         self.gazebo = GazeboConnection(start_init_physics_parameters,reset_world_or_sim)
-        self.controllers_object = ControllersConnection(namespace=robot_name_space, controllers_list=controllers_list)
+        self.controllers_objects = [ControllersConnection(namespace=robot_name_spaces[i],
+                                                    controllers_list=controllers_list)
+                                                    for i in range(n)]
         self.reset_controls = reset_controls
         self.seed()
 
         # Set up ROS related variables
         self.episode_num = 0
-        self.cumulated_episode_reward = 0
+        self.cumulated_episode_rewards = [0] * n
         self.reward_pub = rospy.Publisher('/openai/reward', RLExperimentInfo, queue_size=1)
 
         # We Unpause the simulation and reset the controllers if needed
@@ -34,7 +36,8 @@ class RobotGazeboEnv(gym.Env):
         """
         self.gazebo.unpauseSim()
         if self.reset_controls:
-            self.controllers_object.reset_controllers()
+            for o in self.controllers_objects:
+                o.reset_controllers()
 
         self._check_all_systems_ready()
         self.gazebo.pauseSim()
@@ -66,12 +69,13 @@ class RobotGazeboEnv(gym.Env):
         obs = self._get_obs()
         done = self._is_done(obs)
         info = {}
-        reward = self._compute_reward(obs, done)
-        self.cumulated_episode_reward += reward
+        rewards = self._compute_reward(obs, done)
+        for i in range(len(rewards)):
+            self.cumulated_episode_rewards += rewards[i]
 
         # rospy.logdebug("END STEP OpenAIROS")
 
-        return obs, reward, done, info
+        return obs, rewards, done, info
 
     def reset(self):
         # rospy.logdebug("Reseting RobotGazeboEnvironment")
@@ -98,17 +102,19 @@ class RobotGazeboEnv(gym.Env):
         :return:
         """
         # rospy.loginfo("PUBLISHING REWARD...")
-        self._publish_reward_topic(
-                                    self.cumulated_episode_reward,
+        for i in range(len(self.cumulated_episode_rewards)):
+            self._publish_reward_topic(
+                                    self.cumulated_episode_rewards[i],
+                                    i,
                                     self.episode_num
                                     )
+            self.cumulated_episode_rewards[i] = 0
         #rospy.loginfo("PUBLISHING REWARD...DONE="+str(self.cumulated_episode_reward)+",EP="+str(self.episode_num))
 
         self.episode_num += 1
-        self.cumulated_episode_reward = 0
 
 
-    def _publish_reward_topic(self, reward, episode_number=1):
+    def _publish_reward_topic(self, robot_id, reward, episode_number=1):
         """
         This function publishes the given reward in the reward topic for
         easy access from ROS infrastructure.
@@ -118,6 +124,7 @@ class RobotGazeboEnv(gym.Env):
         """
         reward_msg = RLExperimentInfo()
         reward_msg.episode_number = episode_number
+        reward_msg.robot_id = robot_id
         reward_msg.episode_reward = reward
         self.reward_pub.publish(reward_msg)
 
@@ -133,7 +140,8 @@ class RobotGazeboEnv(gym.Env):
             self.gazebo.resetSim()
             self._set_init_pose()
             self.gazebo.unpauseSim()
-            self.controllers_object.reset_controllers()
+            for o in self.controllers_objects:
+                o.reset_controllers()
             self._check_all_systems_ready()
             self.gazebo.pauseSim()
 

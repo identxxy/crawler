@@ -4,7 +4,10 @@ import crawler.register_all_env
 import rospy
 
 rospy.init_node('test')
-env1 = gym.make('CrawlerWalkXEnv-v0', robot_id=0)
-env2 = gym.make('CrawlerWalkXEnv-v0', robot_id=1)
+env = gym.make('CrawlerStandupEnv-v0', n=2)
+obs, reward, done, info = env.step([0.0] * 32)
+obs, reward, done, info = env.step([0.0] * 32)
+obs, reward, done, info = env.step([0.0] * 32)
+obs, reward, done, info = env.step([0.0] * 32)
 env.reset()
 

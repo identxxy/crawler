@@ -47,10 +47,10 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         # Construct the RobotEnv so we know the dimension of cmd
         super(WalkXTaskEnv, self).__init__(**kwargs)
         # Only variable needed to be set here
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16, 1), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16 * self.n, 1), dtype=np.float32)
         self._init_env_variables()
         
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(60, 1), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(60 * self.n, 1), dtype=np.float32)
         
         rospy.logdebug("END init TestTaskEnv")
 
@@ -65,11 +65,12 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         of an episode.
         :return:
         """
-        self.roll = 0
-        self.pitch = 0
-        self.yaw = 0
-        self.cmd = np.zeros(len(self.publisher_list))
         self.steps = 0
+        self.cmd = np.zeros(self.n * 16)
+        for r in self.robots:
+            r.roll = 0
+            r.pitch = 0
+            r.yaw = 0
 
 
     def _set_action(self, action):
@@ -88,29 +89,34 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         MyRobotEnv API DOCS
         :return: observations
         """
-        joints, global_pos, global_vel = self.obs_joints()
-        orientation_q = global_pos.orientation
-        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
-        (self.roll, self.pitch, self.yaw) = euler_from_quaternion (orientation_list)
-        return np.concatenate([
-            joints.position,
-            joints.velocity,
-            joints.effort,
-            (
-                global_pos.position.x,
-                global_pos.position.y,
-                global_pos.position.z,
-                self.roll,
-                self.pitch,
-                self.yaw,
-                global_vel.linear.x,
-                global_vel.linear.y,
-                global_vel.linear.z,
-                global_vel.angular.x,
-                global_vel.angular.y,
-                global_vel.angular.z
-            )
-        ])
+        states = self.obs_states()
+        obs = np.zeros(60 * self.n, dtype=float)
+        for i in range(self.n):
+            r = self.robots[i]
+            joints, global_pos, global_vel = states[i]
+            orientation_q = global_pos.orientation
+            orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+            (r.roll, r.pitch, r.yaw) = euler_from_quaternion (orientation_list)
+            obs[60 * i: 60 * i + 60] = np.concatenate([
+                joints.position,
+                joints.velocity,
+                joints.effort,
+                (
+                    global_pos.position.x,
+                    global_pos.position.y,
+                    global_pos.position.z,
+                    r.roll,
+                    r.pitch,
+                    r.yaw,
+                    global_vel.linear.x,
+                    global_vel.linear.y,
+                    global_vel.linear.z,
+                    global_vel.angular.x,
+                    global_vel.angular.y,
+                    global_vel.angular.z
+                )
+            ])
+        return obs
 
     def _is_done(self, observations):
         """
@@ -123,18 +129,22 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         Return the reward based on the observations given
         """
-        reward = self.global_vel.linear.x * self.reward_x_vel + self.global_vel.linear.y * self.reward_y_vel
-        reward -= self.reward_ori_k * ( 1 - math.cos(self.roll) * math.cos(self.pitch) )
-        if self.global_pos.position.z < self.reward_height_thd: # punishment
-            reward += self.reward_height_k * (self.global_pos.position.z - self.reward_height_thd)
-        reward -= self.effort_penalty * sum(map(abs, self.joints.effort)) / self.effort_max
-        knee_land_cnt = 0
-        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_B', None).link_state.pose.position.z < self.punish_knee_thd
-        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_F', None).link_state.pose.position.z < self.punish_knee_thd
-        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_L', None).link_state.pose.position.z < self.punish_knee_thd
-        knee_land_cnt += self.get_link_state(self.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
-        reward -= knee_land_cnt * self.punish_knee
-        return reward
+        rewards = np.zeros(self.n, dtype=float)
+        for i in range(self.n):
+            r = self.robots[i]
+            reward = r.global_vel.linear.x * self.reward_x_vel + r.global_vel.linear.y * self.reward_y_vel
+            reward -= self.reward_ori_k * ( 1 - math.cos(r.roll) * math.cos(r.pitch) )
+            if r.global_pos.position.z < self.reward_height_thd: # punishment
+                reward += self.reward_height_k * (r.global_pos.position.z - self.reward_height_thd)
+            reward -= self.effort_penalty * sum(map(abs, r.joints.effort)) / self.effort_max
+            knee_land_cnt = 0
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_B', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_F', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_L', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
+            reward -= knee_land_cnt * self.punish_knee
+            rewards[i] = reward
+        return rewards
         
     # Internal TaskEnv Methods
 
