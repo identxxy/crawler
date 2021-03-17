@@ -2,7 +2,7 @@ crawler: #namespace
 
     #environment variables
     reward_x_vel: 1 
-    reward_y_vel: -1 
+    reward_y_vel: -0.2 
     reward_height_thd: 0.40
     reward_height_k: 10
     reward_ori_k: 1

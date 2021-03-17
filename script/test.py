@@ -1,9 +1,10 @@
 import rospy 
-from gazebo_msgs.msg import ModelStates
-from sensor_msgs.msg import JointState
+import gym
+import crawler.register_all_env
+import rospy
 
 rospy.init_node('test')
-try:
-    msg = rospy.wait_for_message( '/crawler/joint_states', JointState, timeout=10.0)
-except rospy.ROSException:
-    print('f')
+env = gym.make('CrawlerWalkXEnv-v0', robot_id=0)
+env = gym.make('CrawlerWalkXEnv-v0', robot_id=1)
+env.reset()
+

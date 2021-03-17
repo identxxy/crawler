@@ -25,7 +25,7 @@ def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_
 
 
 class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Load all the params first
         LoadYamlFileParamsTest("crawler", "config", "walk_forwad_param.yaml")
         # Variables that we retrieve through the param server, loded when launch training launch.
@@ -45,7 +45,7 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         rospy.wait_for_service('gazebo/get_link_state')
         self.get_link_state = rospy.ServiceProxy('gazebo/get_link_state', GetLinkState)
         # Construct the RobotEnv so we know the dimension of cmd
-        super(WalkXTaskEnv, self).__init__()
+        super(WalkXTaskEnv, self).__init__(**kwargs)
         # Only variable needed to be set here
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16, 1), dtype=np.float32)
         self._init_env_variables()

@@ -6,7 +6,7 @@ import gym
 import crawler.register_all_env
 import rospy
 from Training import *
-import pybullet_envs
+# import pybullet_envs
 from ACNet import acNetCell, load_checkpoint, Shared_obs_stats
 
 

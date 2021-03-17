@@ -12,12 +12,13 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
     """Superclass for all Robot environments.
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """Initializes a new Robot environment.
         """
         # Variables that we give through the constructor.
         # namespace
-        self.ns = "/crawler"
+        self.id = kwargs['robot_id']
+        self.ns = "/crawler_" + str(self.id)
         self.controllers_list = [
             'joint_state_controller',
             'joint1_B_controller',

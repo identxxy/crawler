@@ -21,11 +21,11 @@ def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_
 
 
 class TestTaskEnv(crawler_env.CrawlerRobotEnv):
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Load all the params first
         LoadYamlFileParamsTest("crawler", "config", "test_qlearn_param.yaml")
         # Construct the RobotEnv so we know the dimension of cmd
-        super(TestTaskEnv, self).__init__()
+        super(TestTaskEnv, self).__init__(**kwargs)
         # Only variable needed to be set here
         number_actions = rospy.get_param('/crawler/n_actions')
         self.action_space = spaces.Discrete(number_actions)

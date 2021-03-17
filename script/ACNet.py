@@ -51,8 +51,8 @@ class acNetCell(nn.Module):
 
         self.gru = nn.GRU(hidden_size[-1], gru_hidden_size, batch_first=False)
         self.critic_linear = nn.Sequential(nn.Linear(gru_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
-        self.actor_linear = nn.Linear(gru_hidden_size, 60)
-        self.mu_linear = nn.Linear(60, num_actions)
+        self.actor_linear = nn.Linear(gru_hidden_size, 100)
+        self.mu_linear = nn.Linear(100, num_actions)
         #self.sigma_linear = nn.Linear(60, num_actions)
         self.sigma_linear = torch.nn.Parameter(torch.zeros(1, num_actions))
 

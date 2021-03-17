@@ -9,6 +9,7 @@
 
   <arg name="world_name" default="empty_speedup"/>
   <arg name="control_type" default="effort"/>
+  <arg name="number" default="1"/>
 
   <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -22,10 +23,13 @@
   </include>
 
   <!-- Load the URDF into the ROS Parameter Server -->
-  <include file="$(find crawler)/launch/spawn.launch"/>
-
+  <!-- <include file="$(find crawler)/launch/spawn.launch">
+    <arg name="number" value="$(arg number)" />
+  </include> -->
+<!-- 
   <include file="$(find crawler)/launch/control.launch">
     <arg name="control_type" value="$(arg control_type)"/>
-  </include>
+    <arg name="number" value="$(arg number)" />
+  </include> -->
 
 </launch>

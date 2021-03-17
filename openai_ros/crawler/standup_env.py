@@ -23,7 +23,7 @@ def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_
 
 
 class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Load all the params first
         LoadYamlFileParamsTest("crawler", "config", "standup_param.yaml")
         # Variables that we retrieve through the param server, loded when launch training launch.
@@ -34,7 +34,7 @@ class StandupTaskEnv(crawler_env.CrawlerRobotEnv):
         self.epoch_steps = rospy.get_param('/crawler/epoch_steps')
         self.running_step = rospy.get_param('/crawler/running_step')
         # Construct the RobotEnv so we know the dimension of cmd
-        super(StandupTaskEnv, self).__init__()
+        super(StandupTaskEnv, self).__init__(**kwargs)
         # Only variable needed to be set here
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16, 1), dtype=np.float32)
         self._init_env_variables()
