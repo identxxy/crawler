@@ -15,5 +15,5 @@ register(
 register(
         id='CrawlerWalkXEnv-v0',
         entry_point='crawler.walk_forward:WalkXTaskEnv',
-        kwargs={'robot_id': 0}
+        kwargs={'number': 1}
     )
