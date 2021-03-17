@@ -6,7 +6,7 @@ crawler: #namespace
     effort_penalty: 0.05    # penalty on reward
     effort_max: 100     # defined in urdf/crawler.xacro joint[1-4]_property
     
-    epoch_steps: 128
+    epoch_steps: 512
     running_step: 0.05 # amount of time the control will be executed
     
     
