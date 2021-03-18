@@ -27,7 +27,7 @@ class ReplayMemory(object):
         # Events = list(zip(*events))
         #self.memory.append(map(lambda x: torch.cat([torch.repeat_interleave(torch.zeros_like(x[0]),(1000-len(x)),dim = 0),
                                                     #torch.cat(x, 0)],0), events))
-        self.memory.append(map(lambda x: torch.cat(x, 0), events))                                            
+        self.memory.append(map(lambda x: torch.cat(x, 0), events))
         self.load += len(events[1])
         self.batchsize += 1
         # if len(self.memory)>self.capacity:
@@ -44,12 +44,13 @@ class ReplayMemory(object):
         return data
 
 
-def train(env, model, optimizer, shared_obs_stats, device, params, plot_dict):
+def train(env, model, optimizer, shared_obs_stats, device, params):
     memory = ReplayMemory(params.num_steps)
     state = env.reset()
     state = Variable(torch.Tensor(state).unsqueeze(0))
     done = True
     episode = params.initial_model
+    n = params.robot_number
     #model.train()
 
     # horizon loop
@@ -58,8 +59,6 @@ def train(env, model, optimizer, shared_obs_stats, device, params, plot_dict):
         episode_length = 0
         while (memory.load < params.num_steps):
             states = []
-            h = []
-            c = []
             actions = []
             rewards = []
             values = []
@@ -69,14 +68,15 @@ def train(env, model, optimizer, shared_obs_stats, device, params, plot_dict):
             av_reward = 0
             cum_reward = 0
             cum_done = 0
+            R = torch.zeros(1, n)
             hx = torch.zeros((params.gruhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
-            cx = torch.zeros((params.gruhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
 
             # n steps loops
             for step in range(params.num_steps):
                 episode_length += 1
                 shared_obs_stats.observes(state)
                 state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
+                state = state.reshape(n, 60)
                 states.append(state)
                 #print(hx.shape)
                 #print(state.shape)
@@ -92,10 +92,11 @@ def train(env, model, optimizer, shared_obs_stats, device, params, plot_dict):
                 logprobs.append(log_prob)
                 values.append(v)
                 env_action = torch.tanh(action).data.squeeze().cpu().numpy()
-                state, reward, done, _ = env.step(env_action)
-                reward = reward[0]
-                if done:
-                    reward += state[48] * 100
+                env_action = env_action.reshape(-1, n * 16)
+                state_, reward, done, _ = env.step(env_action)
+                if step % 128 == 0:
+                    for i in range(n):
+                        reward[i] += state_[60*i + 48] * 100
                 cum_reward += reward
                 # reward = max(min(reward, 1), -1)
                 rewards.append(reward)
@@ -107,30 +108,23 @@ def train(env, model, optimizer, shared_obs_stats, device, params, plot_dict):
                     cum_reward = 0
                     episode_length = 0
                     state = env.reset()
-                state = Variable(torch.Tensor(state).unsqueeze(0))
-                if done:       #step >= params.max_episode_length-1:
+                    with torch.no_grad():
+                        _, _, v, _, _ = model.single_forward(state_,hx)
+                        values.append(v)
                     break
 
-            # one last step
-            R = torch.zeros(1, 1)
-            # if not done:
-            #     with torch.no_grad():
-            #         _, _, v, _, _ = model.single_forward(state,hx,cx)
-            #     R = v.data
-
             # compute returns and GAE(lambda) advantages:
-            R = Variable(R).to(device)
-            values.append(R)
-            A = Variable(torch.zeros(1, 1)).to(device)
-            for i in reversed(range(len(rewards))):
-                td = rewards[i] + params.gamma * values[i + 1].data[0, 0] - values[i].data[0, 0]
-                A = float(td) + params.gamma * params.gae_param * A
-                advantages.insert(0, A)
-                R = A + values[i]
-                returns.insert(0, R)
+            for j in range(n):
+                A = Variable(torch.zeros(1, 1)).to(device)
+                for i in reversed(range(len(rewards))):
+                    td = rewards[i][j] + params.gamma * values[i + 1][j].data[0, 0] - values[i][j].data[0, 0]
+                    A = float(td) + params.gamma * params.gae_param * A
+                    advantages.insert(0, A)
+                    R = A + values[i]
+                    returns.insert(0, R)
 
-            # store usefull info:
-            memory.push([states, actions, returns, advantages, logprobs])
+                # store usefull info:
+                memory.push([states[:,j], actions[:,j], returns, advantages, logprobs[:,j]])
 
         model.train()
         # epochs
@@ -180,11 +174,12 @@ def train(env, model, optimizer, shared_obs_stats, device, params, plot_dict):
             optimizer.step()
 
         # finish, print:
-        if episode % params.save_interval == 0:
-            plot_dict['reward'].append(av_reward / float(cum_done))
-            plot_dict['loss'].append(total_loss)
-            save_checkpoint(params.save_path, episode, model, optimizer, shared_obs_stats, plot_dict)
         print('episode', episode, 'av_reward', av_reward / float(cum_done), 'total loss', total_loss)
+        if episode % params.save_interval == 0:
+            save_checkpoint(params.save_path, episode, model, optimizer, shared_obs_stats)
+            f = open(params.save_path + ".txt", "a")
+            f.write("%f %f\n" % (av_reward / float(cum_done), total_loss))
+            f.close()
         memory.clear()
 
 
@@ -194,4 +189,6 @@ def mkdir(base, name):
         os.makedirs(path)
     return path
 
-
+def readtxt(name):
+    mat = np.loadtxt(name, dtype='f', delimiter=' ')
+    return mat
