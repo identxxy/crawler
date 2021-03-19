@@ -9,31 +9,6 @@ def weights_init_uniform(m):
         torch.nn.init.xavier_uniform(m.weight.data, mean=1, std=0.02)
         torch.nn.init.constant_(m.bias.data, 0.1)
 
-class acNet(nn.Module):
-    def __init__(self, num_inputs, num_actions, hidden_size, gru_hidden_size):
-        super(acNet, self).__init__()
-        self.cell = acNetCell(num_inputs, num_actions, hidden_size, gru_hidden_size)
-        self.cell.apply(weights_init_uniform)
-
-    def single_forward(self, x, hx, cx):
-        return self.cell(x, hx, cx)
-
-    def sequence_forward(self, x, hx, cx):
-        Mu = []
-        Sigma = []
-        V_pred = []
-        for states in x:
-            mu, sigma, v_pred, hx, cx = self.cell(states, hx, cx)
-            Mu.append(mu)
-            Sigma.append(sigma)
-            V_pred.append(v_pred)
-
-        Mu = torch.stack(Mu, 0)
-        Sigma = torch.stack(Sigma, 0)
-        V_pred = torch.stack(V_pred, 0)
-
-        return Mu, Sigma, V_pred
-
 
 class acNetCell(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_size, gru_hidden_size):
@@ -43,7 +18,7 @@ class acNetCell(nn.Module):
 
         self.hidden = []
         for i in range(len(hidden_size)-1):
-            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]))
+            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i+1]).cuda())
             #self.hidden.append(nn.BatchNorm1d(hidden_size[i + 1]))
             #self.hidden.append(nn.ReLU())
 
@@ -90,57 +65,45 @@ class acNetCell(nn.Module):
         return mu, sigma, self.critic_linear(x), hx
 
 
-def save_checkpoint(save_path, episode, model, optimizer, obs, plot_dict):
+    
+    
+    
+def save_checkpoint(save_path, episode, model, optimizer, obs):
     if save_path == None:
         return
     save_path = '%s/%d.pt'%(save_path,episode)
     state_dict = {'model_state_dict': model.state_dict(),
                   'optimizer_state_dict': optimizer.state_dict(),
-                  'obs_state_dict': obs.save(),
-                  'plot_dict': plot_dict}
+                  'obs_state_dict': obs.save()}
 
     torch.save(state_dict, save_path)
 
     print(f'Model saved to ==> {save_path}')
 
 
-def load_checkpoint(save_path, episode, model, optimizer, obs, plot_dict):
+def load_checkpoint(save_path, episode, model, optimizer, obs):
     save_path = '%s/%d.pt' % (save_path, episode)
     state_dict = torch.load(save_path, map_location=torch.device('cpu'))
     model.load_state_dict(state_dict['model_state_dict'])
     optimizer.load_state_dict(state_dict['optimizer_state_dict'])
     obs.load(state_dict['obs_state_dict'])
-    plot_dict = state_dict['plot_dict']
 
 
     print(f'Model loaded from <== {save_path}')
 
 
-class Shared_grad_buffers():
-    def __init__(self, model):
-        self.grads = {}
-        for name, p in model.named_parameters():
-            self.grads[name+'_grad'] = torch.ones(p.size()).share_memory_()
-
-    def add_gradient(self, model):
-        for name, p in model.named_parameters():
-            self.grads[name+'_grad'] += p.grad.data
-
-    def reset(self):
-        for name,grad in self.grads.items():
-            self.grads[name].fill_(0)
-
 class Shared_obs_stats():
-    def __init__(self, num_inputs):
+    def __init__(self, num_inputs, step):
         self.n = torch.zeros(num_inputs).share_memory_()
         self.mean = torch.zeros(num_inputs).share_memory_()
         self.mean_diff = torch.zeros(num_inputs).share_memory_()
         self.var = torch.zeros(num_inputs).share_memory_()
+        self.step = float(step)
 
     def observes(self, obs):
         # observation mean var updates
-        x = obs.data.squeeze()
-        self.n += 1.
+        x = obs.data.squeeze().mean(dim = 0)
+        self.n += self.step
         last_mean = self.mean.clone()
         self.mean += (x-self.mean)/self.n
         self.mean_diff += (x-last_mean)*(x-self.mean)

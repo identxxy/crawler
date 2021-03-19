@@ -15,8 +15,8 @@ from ACNet import acNetCell, load_checkpoint, Shared_obs_stats
 parser = argparse.ArgumentParser(description = "crawlerD");
 
 ## env
-parser.add_argument('--num_steps',     type=int,   default=8192,    help='Input length to the network for training');
-parser.add_argument('--batch_size',     type=int,   default=64,    help='Batch size, number of speakers per batch');
+parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input length to the network for training');
+parser.add_argument('--batch_size',     type=int,   default=1,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
 parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v0", help='env_name');
@@ -47,7 +47,7 @@ parser.add_argument('--initial_model',  type=int,   default=0,     help='old mod
 parser.add_argument('--save_path',      type=str,   default="exp", help='Path for model and logs');
 
 ## Model definition
-parser.add_argument('--inputsize',         type=int,   default=61,     help='inputsize');
+parser.add_argument('--inputsize',         type=int,   default=60,     help='inputsize');
 parser.add_argument('--robot_number',      type=int,   default=1,     help='robot number');
 parser.add_argument('--hiddensize', nargs='+', type=int,   default = [300, 200, 100],  help='hiddensize')
 parser.add_argument('--gruhiddensize',   type=int,   default=100,  help='Embedding size in the gru layer');
@@ -63,10 +63,10 @@ def main():
     #env.render()
     device = torch.device('cuda', index=0) if torch.cuda.is_available() else torch.device('cpu')
     torch.manual_seed(params.seed)
-    num_inputs = env.observation_space.shape[0]
-    num_outputs = env.action_space.shape[0]
+    num_inputs = int(env.observation_space.shape[0] / params.robot_number)
+    num_outputs = int(env.action_space.shape[0] / params.robot_number)
     model = acNetCell(num_inputs, num_outputs, params.hiddensize, params.gruhiddensize).to(device)
-    shared_obs_stats = Shared_obs_stats(num_inputs)
+    shared_obs_stats = Shared_obs_stats(num_inputs, params.robot_number)
     optimizer = optim.Adam(model.parameters(), lr=params.lr, weight_decay = params.weight_decay)
 
 
@@ -89,7 +89,7 @@ def main():
         print('Number of GPUs:', torch.cuda.device_count())
         print('Save path:', params.save_path)
 
-        train(env, model, optimizer, shared_obs_stats, device, params, plot_dict)
+        train(env, model, optimizer, shared_obs_stats, device, params)
 
 
     #test mode
