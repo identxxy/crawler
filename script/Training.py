@@ -46,8 +46,7 @@ class ReplayMemory(object):
 
 def train(env, model, optimizer, shared_obs_stats, device, params):
     memory = ReplayMemory(params.num_steps)
-    state = env.reset()
-    state = Variable(torch.Tensor(state).unsqueeze(0))
+    state = env.reset()  
     done = True
     episode = params.initial_model
     n = params.robot_number
@@ -57,26 +56,24 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
     for t in range(params.time_horizon):
         model.eval()
         episode_length = 0
-        while (memory.load < params.num_steps):
+        while (memory.load < params.num_steps * params.batch_size * n):
             states = []
             actions = []
             rewards = []
             values = []
-            returns = []
-            advantages = []
             logprobs = []
             av_reward = 0
             cum_reward = 0
             cum_done = 0
-            R = torch.zeros(1, n)
-            hx = torch.zeros((params.gruhiddensize)).unsqueeze(0).unsqueeze(0).to(device)
+            hx = torch.zeros((n,params.gruhiddensize)).unsqueeze(0).to(device)
 
             # n steps loops
             for step in range(params.num_steps):
+                state = Variable(torch.Tensor(state))
                 episode_length += 1
+                state = state.reshape(n, 60)
                 shared_obs_stats.observes(state)
                 state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
-                state = state.reshape(n, 60)
                 states.append(state)
                 #print(hx.shape)
                 #print(state.shape)
@@ -85,56 +82,73 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                     mu, sigma, v, hx = model.single_forward(state, hx)
                 # h.append(hx)
                 # c.append(cx)
+                #print(v.shape)
                 action = (mu + torch.exp(sigma) * Variable(torch.randn(mu.size()).to(device)))
                 actions.append(action)
                 log_prob = -0.5 * ((action - mu) / torch.exp(sigma)).pow(2) - (0.5 * math.log(2 * math.pi)) - sigma
                 log_prob = log_prob.sum(-1, keepdim=True)
                 logprobs.append(log_prob)
                 values.append(v)
-                env_action = torch.tanh(action).data.squeeze().cpu().numpy()
-                env_action = env_action.reshape(-1, n * 16)
-                state_, reward, done, _ = env.step(env_action)
+                action = action.reshape(1, n * 16)
+                env_action = torch.tanh(action).data.squeeze().cpu().numpy()               
+                state, reward, done, _ = env.step(env_action)
                 if step % 128 == 0:
                     for i in range(n):
-                        reward[i] += state_[60*i + 48] * 100
+                        reward[i] += state[60*i + 48] * 50
                 cum_reward += reward
                 # reward = max(min(reward, 1), -1)
                 rewards.append(reward)
-
+                
                 if done:
                     episode += 1
-                    cum_done += 1
+                    cum_done += n
                     av_reward += cum_reward
                     cum_reward = 0
                     episode_length = 0
-                    state = env.reset()
                     with torch.no_grad():
-                        _, _, v, _, _ = model.single_forward(state_,hx)
+                        state = Variable(torch.Tensor(state))
+                        state = state.reshape(n, 60)
+                        shared_obs_stats.observes(state)
+                        state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
+                        _, _, v, _ = model.single_forward(state,hx)
                         values.append(v)
+                    state = env.reset()
                     break
+                
 
             # compute returns and GAE(lambda) advantages:
             for j in range(n):
+                returns = []
+                advantages = []
+                st = []
+                ac = []
+                lo = []
+                R = torch.zeros(1, 1)
                 A = Variable(torch.zeros(1, 1)).to(device)
                 for i in reversed(range(len(rewards))):
-                    td = rewards[i][j] + params.gamma * values[i + 1][j].data[0, 0] - values[i][j].data[0, 0]
+                    td = rewards[i][j] + params.gamma * values[i + 1].data[0, j] - values[i].data[0, j]
                     A = float(td) + params.gamma * params.gae_param * A
                     advantages.insert(0, A)
-                    R = A + values[i]
+                    R = A + values[i][0][j]
                     returns.insert(0, R)
-
-                # store usefull info:
-                memory.push([states[:,j], actions[:,j], returns, advantages, logprobs[:,j]])
+                    st.insert(0, states[i][0][j].unsqueeze(0).unsqueeze(0))
+                    ac.insert(0, actions[i][0][j].unsqueeze(0).unsqueeze(0))
+                    lo.insert(0, logprobs[i][0][j].unsqueeze(0).unsqueeze(0))
+                #print(advantages[0].shape) torch.Size([1, 1])
+                memory.push([st, ac, returns, advantages, lo])
+                
 
         model.train()
+        #print(memory.load)
         # epochs
         batch_states, batch_actions, batch_returns, batch_advantages, batch_logprobs = memory.pull()
         batch_advantages = batch_advantages.unsqueeze(-1)
-
+        batch_returns = batch_returns.unsqueeze(-1)
+        #print(batch_states.shape)torch.Size([1024, 4, 60])
         for k in range(params.num_epoch):
             # new probas
             hx = torch.zeros((memory.batchsize, params.gruhiddensize)).unsqueeze(0).to(device)
-            cx = torch.zeros((memory.batchsize, params.gruhiddensize)).unsqueeze(0).to(device)
+            
             Mu, Sigma, V_pred = model(batch_states, hx)  # size: length * batch * sigma_size
             #Sigma = Sigma.expand_as(Mu)
 
@@ -174,6 +188,7 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
             optimizer.step()
 
         # finish, print:
+        av_reward = sum(av_reward)
         print('episode', episode, 'av_reward', av_reward / float(cum_done), 'total loss', total_loss)
         if episode % params.save_interval == 0:
             save_checkpoint(params.save_path, episode, model, optimizer, shared_obs_stats)
