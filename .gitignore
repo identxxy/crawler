@@ -4,4 +4,5 @@ training_results/
 *.py[cod]
 *.pt
 *.sh
+*.txt
 !.gitignore

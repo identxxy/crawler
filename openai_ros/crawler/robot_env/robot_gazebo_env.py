@@ -104,8 +104,8 @@ class RobotGazeboEnv(gym.Env):
         # rospy.loginfo("PUBLISHING REWARD...")
         for i in range(len(self.cumulated_episode_rewards)):
             self._publish_reward_topic(
-                                    self.cumulated_episode_rewards[i],
                                     i,
+                                    self.cumulated_episode_rewards[i],
                                     self.episode_num
                                     )
             self.cumulated_episode_rewards[i] = 0
