@@ -20,3 +20,10 @@ register(
         kwargs={'n': 1, 
                 'displacement_xyz': [0, 10, 0]}
     )
+
+register(
+        id='CrawlerWalkXEnv-v1',
+        entry_point='crawler.walk_forward:WalkXTaskEnv_v1',
+        kwargs={'n': 1, 
+                'displacement_xyz': [0, 10, 0]}
+    )

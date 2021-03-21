@@ -16,10 +16,10 @@ parser = argparse.ArgumentParser(description = "crawlerD");
 
 ## env
 parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input length to the network for training');
-parser.add_argument('--batch_size',     type=int,   default=1,    help='Batch size, number of speakers per batch');
+parser.add_argument('--batch_size',     type=int,   default=8,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
-parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v0", help='env_name');
+parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v1", help='env_name');
 
 ## Training details
 parser.add_argument('--save_interval',  type=int,   default=16,     help='Test and save every [test_interval] epochs');

@@ -92,9 +92,6 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                 action = action.reshape(1, n * 16)
                 env_action = torch.tanh(action).data.squeeze().cpu().numpy()               
                 state, reward, done, _ = env.step(env_action)
-                if step % 128 == 0:
-                    for i in range(n):
-                        reward[i] += state[60*i + 48] * 50
                 cum_reward += reward
                 # reward = max(min(reward, 1), -1)
                 rewards.append(reward)

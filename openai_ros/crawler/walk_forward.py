@@ -148,3 +148,34 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         
     # Internal TaskEnv Methods
 
+
+class WalkXTaskEnv_v1(WalkXTaskEnv):
+    def __init__(self, **kwargs):
+        super(WalkXTaskEnv_v1, self).__init__(**kwargs)
+        self.lastPos = np.zeros([2, self.n])
+
+    def _init_env_variables(self):
+        self.lastPos = np.zeros([2, self.n])
+        WalkXTaskEnv._init_env_variables(self)
+
+    def _compute_reward(self, observations, done):
+        rewards = np.zeros(self.n, dtype=float)
+        for i in range(self.n):
+            r = self.robots[i]
+            x = r.global_pos.position.x
+            y = r.global_pos.position.y
+            lastx = self.lastPos[0,i]
+            lasty = self.lastPos[1,i]
+            reward = (x-lastx) * self.reward_x_vel + (y-lasty) * self.reward_y_vel
+            reward -= self.reward_ori_k * ( 1 - math.cos(r.roll) * math.cos(r.pitch) )
+            if r.global_pos.position.z < self.reward_height_thd: # punishment
+                reward += self.reward_height_k * (r.global_pos.position.z - self.reward_height_thd)
+            reward -= self.effort_penalty * sum(map(abs, r.joints.effort)) / self.effort_max
+            knee_land_cnt = 0
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_B', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_F', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_L', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
+            reward -= knee_land_cnt * self.punish_knee
+            rewards[i] = reward
+        return rewards
