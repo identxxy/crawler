@@ -5,4 +5,5 @@ training_results/
 *.pt
 *.sh
 *.txt
+!CMakeLists.txt
 !.gitignore
