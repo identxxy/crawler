@@ -16,7 +16,7 @@ def main():
         lines = f.readlines()
         for line in lines:
             r, l = line.split(' ')
-            episodes.append(20 * i)
+            episodes.append(8192 * 2 * i)
             i = i + 1
             rewards.append(float(r))
             losses.append(float(l))
@@ -25,12 +25,12 @@ def main():
     ax = fig.add_subplot(211)
     plt.plot(episodes, rewards)
     plt.ylabel('Reward')
-    plt.xlabel('Episode #')
+    plt.xlabel('steps')
     
     ax = fig.add_subplot(212)
     plt.plot(episodes, losses)
     plt.ylabel('Loss')
-    plt.xlabel('Episode #')
+    plt.xlabel('steps')
     plt.show()
 
 if __name__ == '__main__':

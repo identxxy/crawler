@@ -16,14 +16,14 @@ parser = argparse.ArgumentParser(description = "crawlerD");
 
 ## env
 parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input length to the network for training');
-parser.add_argument('--batch_size',     type=int,   default=8,    help='Batch size, number of speakers per batch');
+parser.add_argument('--batch_size',     type=int,   default=1,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
-parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v1", help='env_name');
+parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v0", help='env_name');
 
 ## Training details
-parser.add_argument('--save_interval',  type=int,   default=16,     help='Test and save every [test_interval] epochs');
-parser.add_argument('--time_horizon',      type=int,   default=20000,    help='Maximum number of epochs');
+parser.add_argument('--save_interval',  type=int,   default=4,     help='Test and save every [test_interval] epochs');
+parser.add_argument('--time_horizon',      type=int,   default=2000,    help='Maximum number of epochs');
 parser.add_argument('--max_episode_length',      type=int,   default=1000,    help='Maximum number of episodes');
 
 ## Optimizer
@@ -40,6 +40,7 @@ parser.add_argument('--clip',             type=float, default=0.2,  help='clip')
 parser.add_argument('--ent_coeff',             type=float, default=1e-4,  help='ent_coeff');
 parser.add_argument('--max_grad_norm',             type=float, default=0.5,  help='max_grad_norm');
 parser.add_argument('--seed',             type=float, default=1,  help='seed');
+parser.add_argument('--iso_sig',  type=bool,   default=True,     help='isolated sigma layer');
 
 ## Load and save
 parser.add_argument('--cont_train',  type=bool,   default=False,     help='continues training');
@@ -61,11 +62,12 @@ def main():
     rospy.init_node('crawler_gyb_ppo', anonymous=True, log_level=rospy.INFO)
     env = gym.make(params.env_name, n=params.robot_number)
     #env.render()
+    params.num_steps = rospy.get_param("/crawler/epoch_steps")
     device = torch.device('cuda', index=0) if torch.cuda.is_available() else torch.device('cpu')
     torch.manual_seed(params.seed)
     num_inputs = int(env.observation_space.shape[0] / params.robot_number)
     num_outputs = int(env.action_space.shape[0] / params.robot_number)
-    model = acNetCell(num_inputs, num_outputs, params.hiddensize, params.gruhiddensize).to(device)
+    model = acNetCell(num_inputs, num_outputs, params.hiddensize, params.gruhiddensize, params.iso_sig).to(device)
     shared_obs_stats = Shared_obs_stats(num_inputs, params.robot_number)
     optimizer = optim.Adam(model.parameters(), lr=params.lr, weight_decay = params.weight_decay)
 
