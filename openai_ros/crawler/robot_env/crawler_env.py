@@ -28,9 +28,9 @@ class Robot():
     def model_callback(self, data):
         if self.model_index:
             self.global_pos = data.pose[self.model_index]
-            self.global_pos.position.x -= self.displacement_xyz[0]
-            self.global_pos.position.y -= self.displacement_xyz[1]
-            self.global_pos.position.z -= self.displacement_xyz[2]
+            self.global_pos.position.x -= self.displacement_xyz[0] * self.i
+            self.global_pos.position.y -= self.displacement_xyz[1] * self.i
+            self.global_pos.position.z -= self.displacement_xyz[2] * self.i
             self.global_vel = data.twist[self.model_index]
 
     def joints_callback(self, data):

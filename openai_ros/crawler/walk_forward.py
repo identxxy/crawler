@@ -166,7 +166,7 @@ class WalkXTaskEnv_v1(WalkXTaskEnv):
             y = r.global_pos.position.y
             lastx = self.lastPos[0,i]
             lasty = self.lastPos[1,i]
-            reward = (x-lastx) * self.reward_x_vel + (y-lasty) * self.reward_y_vel
+            reward = ( (x-lastx) * self.reward_x_vel + (y-lasty) * self.reward_y_vel ) / self.running_step
             reward -= self.reward_ori_k * ( 1 - math.cos(r.roll) * math.cos(r.pitch) )
             if r.global_pos.position.z < self.reward_height_thd: # punishment
                 reward += self.reward_height_k * (r.global_pos.position.z - self.reward_height_thd)
@@ -178,4 +178,6 @@ class WalkXTaskEnv_v1(WalkXTaskEnv):
             knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
             reward -= knee_land_cnt * self.punish_knee
             rewards[i] = reward
+            self.lastPos[0,i] = x
+            self.lastPos[1,i] = y
         return rewards
