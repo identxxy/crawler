@@ -6,7 +6,9 @@ from gym.utils import seeding
 from std_msgs.msg import Float64
 from rosgraph_msgs.msg import Clock
 from gazebo_msgs.msg import ModelStates
-from sensor_msgs.msg import JointState
+from sensor_msgs.msg import JointState, Image
+
+CAMERA_SIZE = 128 * 128
 
 class Robot():
     def __init__(self, i, displacement_xyz):
@@ -17,6 +19,7 @@ class Robot():
         # The joint_state_controller control no joint but pub the state of all joints
         self.joint_subscriber = rospy.Subscriber(self.ns + '/joint_states', JointState, self.joints_callback)
         self.global_subscriber = rospy.Subscriber('/gazebo/model_states', ModelStates, self.model_callback)
+        self.camera_subscriber = rospy.Subscriber(self.ns + 'camera/image_raw', Image, self.camera_callback)
         self.joints = None
         self.global_pos = None
         self.global_vel = None
@@ -24,6 +27,7 @@ class Robot():
         self.roll = None
         self.pitch = None
         self.yaw = None
+        self.camera = np.zeros(CAMERA_SIZE, dtype=np.uint8)
 
     def model_callback(self, data):
         if self.model_index:
@@ -32,6 +36,10 @@ class Robot():
             self.global_pos.position.y -= self.displacement_xyz[1] * self.i
             self.global_pos.position.z -= self.displacement_xyz[2] * self.i
             self.global_vel = data.twist[self.model_index]
+
+    def camera_callback(self, data):
+        if self.model_index:
+            self.camera = data.data
 
     def joints_callback(self, data):
         self.joints = data
@@ -49,22 +57,22 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
         self.robots = [Robot(i, kwargs['displacement_xyz']) for i in range(self.n)]
         self.controllers_list = [
             'joint_state_controller',
-            'joint1_B_controller',
-            'joint1_F_controller',
-            'joint1_L_controller',
-            'joint1_R_controller',
-            'joint2_B_controller',
-            'joint2_F_controller',
-            'joint2_L_controller',
-            'joint2_R_controller',
-            'joint3_B_controller',
-            'joint3_F_controller',
-            'joint3_L_controller',
-            'joint3_R_controller',
-            'joint4_B_controller',
-            'joint4_F_controller',
-            'joint4_L_controller',
-            'joint4_R_controller'
+            'joint1_LB_controller',
+            'joint1_LF_controller',
+            'joint1_RB_controller',
+            'joint1_RF_controller',
+            'joint2_LB_controller',
+            'joint2_LF_controller',
+            'joint2_RB_controller',
+            'joint2_RF_controller',
+            'joint3_LB_controller',
+            'joint3_LF_controller',
+            'joint3_RB_controller',
+            'joint3_RF_controller',
+            'joint4_LB_controller',
+            'joint4_LF_controller',
+            'joint4_RB_controller',
+            'joint4_RF_controller'
         ]
         for r in self.robots:
             for n in self.controllers_list[1:]:
@@ -79,6 +87,7 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
         super(CrawlerRobotEnv, self).__init__( n=self.n, robot_name_spaces=['crawler_'+str(i) for i in range(self.n)],
                                                 controllers_list=self.controllers_list,
                                                 reset_controls=reset_controls_bool)
+        self.single_obs_space = (60 + CAMERA_SIZE) 
         rospy.logdebug("END init CrawlerRobotEnv")
 
     
@@ -153,4 +162,4 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
                 r.publisher_list[j].publish(joint_value)
 
     def obs_states(self):
-        return [(r.joints, r.global_pos, r.global_vel) for r in self.robots]
+        return [(r.joints, r.global_pos, r.global_vel, r.camera) for r in self.robots]

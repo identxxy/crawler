@@ -60,14 +60,14 @@ class ControllersConnection():
         result_off_ok = self.switch_controllers(controllers_on = [],
                                 controllers_off = self.controllers_list)
 
-        rospy.logdebug("Deactivated Controlers")
+        # rospy.logdebug("Deactivated Controlers")
 
         if result_off_ok:
-            rospy.logdebug("Activating Controlers")
+            # rospy.logdebug("Activating Controlers")
             result_on_ok = self.switch_controllers(controllers_on=self.controllers_list,
                                                     controllers_off=[])
             if result_on_ok:
-                rospy.logdebug("Controllers Reseted==>"+str(self.controllers_list))
+                # rospy.logdebug("Controllers Reseted==>"+str(self.controllers_list))
                 reset_result = True
             else:
                 rospy.logdebug("result_on_ok==>" + str(result_on_ok))

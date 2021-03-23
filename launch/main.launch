@@ -10,6 +10,7 @@
   <arg name="world_name" default="empty_speedup"/>
   <arg name="control_type" default="effort"/>
   <arg name="number" default="1"/>
+  <arg name="camera" default="0"/>
 
   <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -23,6 +24,7 @@
   </include>
 
   <include file="$(find crawler)/launch/multi.launch">
+    <arg name="camera" value="$(arg camera)"/>
     <arg name="control_type" value="$(arg control_type)"/>
     <arg name="number" value="$(eval arg('number')-1)" />
   </include>

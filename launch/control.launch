@@ -2,11 +2,12 @@
 
   <!-- Load joint controller configurations from YAML file to parameter server -->
   <arg name="number"/>
-  <arg name="control_type"/>
+  <arg name="control_type"/>  
+  <arg name="camera"/>
   <rosparam file="$(find crawler)/config/$(arg control_type)_control.yaml" command="load"/>
 
   <!-- load the controllers -->
-  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+  <node name="controller_spawner" pkg="controller_manager" if="$(eval camera==0)" type="spawner" respawn="false"
 	output="screen"  args="joint_state_controller
             joint1_B_controller
             joint1_F_controller
@@ -26,6 +27,25 @@
             joint4_R_controller
             "/>
 
+  <node name="controller_spawner" pkg="controller_manager" if="$(eval camera==1)" type="spawner" respawn="false"
+	output="screen"  args="joint_state_controller
+            joint1_LB_controller
+            joint1_LF_controller
+            joint1_RB_controller
+            joint1_RF_controller
+            joint2_LB_controller
+            joint2_LF_controller
+            joint2_RB_controller
+            joint2_RF_controller
+            joint3_LB_controller
+            joint3_LF_controller
+            joint3_RB_controller
+            joint3_RF_controller
+            joint4_LB_controller
+            joint4_LF_controller
+            joint4_RB_controller
+            joint4_RF_controller
+            "/>
   <!-- convert joint states to TF transforms for rviz, etc -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
 	respawn="false" output="screen">

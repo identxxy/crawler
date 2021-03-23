@@ -1,0 +1,147 @@
+<?xml version="1.0"?>
+<robot name="crawler"
+    xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- Constants for robot dimensions -->
+    <xacro:property name="R_body" value="0.25"/>
+    <xacro:property name="M_body" value="5"/>
+
+    <xacro:property name="R_up_leg" value="0.05"/>
+    <xacro:property name="L_up_leg" value="0.40"/>
+    <xacro:property name="L_up_con_leg" value="0.05"/>
+    <xacro:property name="M_up_leg" value="1.5"/>
+    <xacro:property name="M_up_con_leg" value="0.25"/>
+
+    <xacro:property name="R_down_leg" value="0.025"/>
+    <xacro:property name="L_down_leg" value="0.5"/>
+    <xacro:property name="M_down_leg" value="1"/>
+
+    <xacro:property name="R_foot" value="0.05"/>
+    <xacro:property name="M_foot" value="0.5"/>
+
+    <xacro:macro name="joint1_property">
+        <axis xyz="0 0 1"/>
+        <dynamics damping="0.7" friction="0.0"/>
+        <limit effort="100.0" velocity="10.0" lower="${-pi/4}" upper="${pi/4}"/>
+    </xacro:macro>
+
+    <xacro:macro name="joint2_property">
+        <axis xyz="0 0 1"/>
+        <dynamics damping="0.7" friction="0.0"/>
+        <limit effort="100.0" velocity="10.0" lower="${-pi/4}" upper="${pi/4}"/>
+    </xacro:macro>
+
+    <xacro:macro name="joint3_property">
+        <axis xyz="1 0 0"/>
+        <dynamics damping="0.7" friction="0.0"/>
+        <limit effort="100.0" velocity="10.0" lower="${-pi/2}" upper="${pi/2}"/>
+    </xacro:macro>
+
+    <xacro:macro name="joint4_property">
+        <axis xyz="0 0 1"/>
+        <dynamics damping="0.7" friction="0.0"/>
+        <limit effort="100.0" velocity="10.0" lower="${-pi/3}" upper="${pi/3}"/>
+    </xacro:macro>
+
+    <xacro:macro name="leg_friction_property">
+        <collision>
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>Inf</mu>
+                        <mu2>Inf</mu2>
+                    </ode>
+                </friction>
+            </surface>
+        </collision>
+    </xacro:macro>
+
+    <xacro:macro name="foot_property">
+        <collision>
+            <surface>
+                <contact>
+                    <ode>
+                        <kp>1e9</kp>
+                        <kd>1.00</kd>
+                        <min_depth>0.01</min_depth>
+                    </ode>
+                </contact>
+                <friction>
+                    <ode>
+                        <mu>1.0</mu>
+                        <mu2>1.0</mu2>
+                    </ode>
+                </friction>
+            </surface>
+        </collision>
+    </xacro:macro>
+
+    <xacro:include filename="$(find crawler)/urdf/leg.xacro" />
+    <xacro:include filename="$(find crawler)/urdf/crawler.gazebo" />
+
+    <link name="dummy"/>
+    <joint name="dummy_joint" type="fixed">
+        <parent link="dummy"/>
+        <child link="base"/>
+    </joint>
+    <link name="base">
+        <inertial>
+            <mass value="${M_body}" />
+            <inertia ixx="${2/5 * M_body * R_body * R_body}" ixy="0" ixz="0" iyy="${2/5 * M_body * R_body * R_body}" iyz="0" izz="${2/5 * M_body * R_body * R_body}" />
+        </inertial>
+        <visual>
+            <geometry>
+                <sphere radius="${R_body}"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <sphere radius="${R_body}"/>
+            </geometry>
+        </collision>
+    </link>
+    <gazebo reference="base">
+        <material>Gazebo/Yellow</material>
+    </gazebo>
+
+    <joint name="camera_joint" type="fixed">
+        <parent link="base"/>
+        <child link="camera_link"/>
+        <origin xyz="0 0 ${R_body}" rpy="0 0 0"/>
+    </joint>
+    <link name="camera_link"/>
+    <xacro:include filename="$(find crawler)/urdf/camera.gazebo" />
+
+    <joint name="joint1_LF" type="revolute">
+        <parent link="base"/>
+        <child link="leg1_LF"/>
+        <origin xyz="${R_body * cos(pi/4)} ${R_body * cos(pi/4)} 0" rpy="0 0 ${pi/4}"/>
+        <xacro:joint1_property/>
+    </joint>
+    <xacro:leg suffix="LF"/>
+
+    <joint name="joint1_LB" type="revolute">
+        <parent link="base"/>
+        <child link="leg1_LB"/>
+        <origin xyz="${-R_body * cos(pi/4)} ${R_body * cos(pi/4)} 0" rpy="0 0 ${pi * 3/4}"/>
+        <xacro:joint1_property/>
+    </joint>
+    <xacro:leg suffix="LB"/>
+
+    <joint name="joint1_RF" type="revolute">
+        <parent link="base"/>
+        <child link="leg1_RF"/>
+        <origin xyz="${R_body * cos(pi/4)} ${-R_body * cos(pi/4)} 0" rpy="0 0 ${-pi/4}"/>
+        <xacro:joint1_property/>
+    </joint>
+    <xacro:leg suffix="RF"/>
+
+    <joint name="joint1_RB" type="revolute">
+        <parent link="base"/>
+        <child link="leg1_RB"/>
+        <origin xyz="${-R_body * cos(pi/4)} ${-R_body * cos(pi/4)} 0" rpy="0 0 ${-pi *3/4}"/>
+        <xacro:joint1_property/>
+    </joint>
+    <xacro:leg suffix="RB"/>
+
+</robot>

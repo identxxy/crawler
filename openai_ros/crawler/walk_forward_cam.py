@@ -1,4 +1,4 @@
-from .robot_env import crawler_env
+from .robot_env import crawler_cam_env
 
 from gym import spaces
 import numpy as np
@@ -24,7 +24,7 @@ def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_
         rosparam.upload_params(ns,params)
 
 
-class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
+class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
     def __init__(self, **kwargs):
         # Load all the params first
         LoadYamlFileParamsTest("crawler", "config", "walk_forwad_param.yaml")
@@ -45,12 +45,13 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         rospy.wait_for_service('gazebo/get_link_state')
         self.get_link_state = rospy.ServiceProxy('gazebo/get_link_state', GetLinkState)
         # Construct the RobotEnv so we know the dimension of cmd
-        super(WalkXTaskEnv, self).__init__(**kwargs)
+        super(WalkXCamTaskEnv, self).__init__(**kwargs)
         # Only variable needed to be set here
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(16 * self.n, 1), dtype=np.float32)
         self._init_env_variables()
         
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(60 * self.n, 1), dtype=np.float32)
+        self.obs_space = self.single_obs_space * self.n
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.obs_space * self.n, 1), dtype=np.float32)
         
         rospy.logdebug("END init TestTaskEnv")
 
@@ -85,14 +86,14 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         :return: observations
         """
         states = self.obs_states()
-        obs = np.zeros(60 * self.n, dtype=float)
+        obs = np.zeros(self.obs_space * self.n, dtype=float)
         for i in range(self.n):
             r = self.robots[i]
-            joints, global_pos, global_vel = states[i]
+            joints, global_pos, global_vel, camera = states[i]
             orientation_q = global_pos.orientation
             orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
             (r.roll, r.pitch, r.yaw) = euler_from_quaternion (orientation_list)
-            obs[60 * i: 60 * i + 60] = np.concatenate([
+            obs[self.single_obs_space * i: self.single_obs_space * i + self.single_obs_space] = np.concatenate([
                 joints.position,
                 joints.velocity,
                 joints.effort,
@@ -109,7 +110,8 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
                     global_vel.angular.x,
                     global_vel.angular.y,
                     global_vel.angular.z
-                )
+                ),
+                camera
             ])
         return obs
 
@@ -144,14 +146,14 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
     # Internal TaskEnv Methods
 
 
-class WalkXTaskEnv_v1(WalkXTaskEnv):
+class WalkXTaskEnv_v1(WalkXCamTaskEnv):
     def __init__(self, **kwargs):
         super(WalkXTaskEnv_v1, self).__init__(**kwargs)
         self.lastPos = np.zeros([2, self.n])
 
     def _init_env_variables(self):
         self.lastPos = np.zeros([2, self.n])
-        WalkXTaskEnv._init_env_variables(self)
+        WalkXCamTaskEnv._init_env_variables(self)
 
     def _compute_reward(self, observations, done):
         rewards = np.zeros(self.n, dtype=float)

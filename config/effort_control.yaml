@@ -52,3 +52,53 @@ joint4_L_controller:
 joint4_R_controller:
   type: effort_controllers/JointEffortController
   joint: joint4_R
+
+# for 45 degree leg
+joint1_LF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint1_LF
+joint1_LB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint1_LB
+joint1_RF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint1_RF
+joint1_RB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint1_RB
+joint2_LF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint2_LF
+joint2_LB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint2_LB
+joint2_RF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint2_RF
+joint2_RB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint2_RB
+joint3_LF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint3_LF
+joint3_LB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint3_LB
+joint3_RF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint3_RF
+joint3_RB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint3_RB
+joint4_LF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint4_LF
+joint4_LB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint4_LB
+joint4_RF_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint4_RF
+joint4_RB_controller:
+  type: effort_controllers/JointEffortController
+  joint: joint4_RB
