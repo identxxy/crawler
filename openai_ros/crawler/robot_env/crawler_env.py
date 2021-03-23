@@ -21,9 +21,9 @@ class Robot():
         self.global_pos = None
         self.global_vel = None
         self.model_index = None
-        self.roll = None
-        self.pitch = None
-        self.yaw = None
+        self.roll = 0
+        self.pitch = 0
+        self.yaw = 0
 
     def model_callback(self, data):
         if self.model_index:

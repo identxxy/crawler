@@ -52,8 +52,6 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(60 * self.n, 1), dtype=np.float32)
         
-        rospy.logdebug("END init TestTaskEnv")
-
     def _init_env_variables(self):
         """
         Inits variables needed to be initialised each time we reset at the start
@@ -62,11 +60,6 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
         """
         self.steps = 0
         self.cmd = np.zeros(self.n * 16)
-        for r in self.robots:
-            r.roll = 0
-            r.pitch = 0
-            r.yaw = 0
-
 
     def _set_action(self, action):
         """
