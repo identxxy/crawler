@@ -53,7 +53,7 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
         self.obs_space = self.single_obs_space * self.n
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.obs_space * self.n, 1), dtype=np.float32)
         
-        rospy.logdebug("END init TestTaskEnv")
+        self.cmd = np.zeros(self.n * 16)
 
     def _init_env_variables(self):
         """
@@ -63,11 +63,6 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
         """
         self.steps = 0
         self.cmd = np.zeros(self.n * 16)
-        for r in self.robots:
-            r.roll = 0
-            r.pitch = 0
-            r.yaw = 0
-
 
     def _set_action(self, action):
         """
@@ -86,14 +81,15 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
         :return: observations
         """
         states = self.obs_states()
-        obs = np.zeros(self.obs_space * self.n, dtype=float)
+        obs = []
         for i in range(self.n):
             r = self.robots[i]
             joints, global_pos, global_vel, camera = states[i]
             orientation_q = global_pos.orientation
             orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
             (r.roll, r.pitch, r.yaw) = euler_from_quaternion (orientation_list)
-            obs[self.single_obs_space * i: self.single_obs_space * i + self.single_obs_space] = np.concatenate([
+            single_obs = []
+            single_obs.append(np.concatenate([
                 joints.position,
                 joints.velocity,
                 joints.effort,
@@ -111,8 +107,16 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
                     global_vel.angular.y,
                     global_vel.angular.z
                 ),
-                camera
-            ])
+            ]))
+            img = np.zeros([3,64,64], dtype=np.uint8)
+            f = np.frombuffer(camera[0::3], dtype=np.uint8)
+            img[0] = f.reshape(64,64)
+            f = np.frombuffer(camera[1::3], dtype=np.uint8)
+            img[1] = f.reshape(64,64)
+            f = np.frombuffer(camera[2::3], dtype=np.uint8)
+            img[2] = f.reshape(64,64)
+            single_obs.append(img)
+            obs.append(single_obs)
         return obs
 
     def _is_done(self, observations):

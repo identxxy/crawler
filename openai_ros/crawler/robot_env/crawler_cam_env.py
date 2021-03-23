@@ -8,7 +8,7 @@ from rosgraph_msgs.msg import Clock
 from gazebo_msgs.msg import ModelStates
 from sensor_msgs.msg import JointState, Image
 
-CAMERA_SIZE = 128 * 128
+CAMERA_SIZE = 64 * 64
 
 class Robot():
     def __init__(self, i, displacement_xyz):
@@ -24,10 +24,9 @@ class Robot():
         self.global_pos = None
         self.global_vel = None
         self.model_index = None
-        self.roll = None
-        self.pitch = None
-        self.yaw = None
-        self.camera = np.zeros(CAMERA_SIZE, dtype=np.uint8)
+        self.roll = 0
+        self.pitch = 0
+        self.yaw = 0
 
     def model_callback(self, data):
         if self.model_index:
@@ -39,7 +38,7 @@ class Robot():
 
     def camera_callback(self, data):
         if self.model_index:
-            self.camera = data.data
+            self.camera = data
 
     def joints_callback(self, data):
         self.joints = data
@@ -101,7 +100,12 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
         """
         for r in self.robots:
             r.joints = None
+            r.camera = None
             while r.joints is None and not rospy.is_shutdown():
+                try:
+                    r.model_index = rospy.wait_for_message('/gazebo/model_states', ModelStates, 3).name.index(r.ns[1:])
+                except rospy.exceptions.ROSException:
+                    rospy.logerr("Robot model does not exist.")
                 try:
                     r.joints = rospy.wait_for_message(
                         r.ns + '/joint_states', JointState, timeout=3.0)
@@ -109,9 +113,10 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
                     rospy.logerr("Current /joint_states not ready yet.\n\
                      Do you spawn the robot and launch ros_control?")
                 try:
-                    r.model_index = rospy.wait_for_message('/gazebo/model_states', ModelStates, 3).name.index(r.ns[1:])
+                    r.camera = rospy.wait_for_message(
+                        r.ns + '/camera/image_raw', Image, timeout=3.0)
                 except rospy.exceptions.ROSException:
-                    rospy.logerr("Robot model does not exist.")
+                    rospy.logerr("image not ready.")
 
         # rospy.logdebug("ALL SYSTEMS READY")
         return True
@@ -162,4 +167,4 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
                 r.publisher_list[j].publish(joint_value)
 
     def obs_states(self):
-        return [(r.joints, r.global_pos, r.global_vel, r.camera) for r in self.robots]
+        return [(r.joints, r.global_pos, r.global_vel, r.camera.data) for r in self.robots]
