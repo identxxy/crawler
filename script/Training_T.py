@@ -12,9 +12,16 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+import torchvision.models as models
 
 from ACNet_T import save_checkpoint, load_checkpoint
 
+class Identity(nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+        
+    def forward(self, x):
+        return x
 
 class ReplayMemory(object):
     def __init__(self, capacity):
@@ -46,6 +53,7 @@ class ReplayMemory(object):
 def state_transfer(state_pic):
     state = []
     pic = []
+    #print(state_pic[0].shape)
     for s in state_pic:
         state.append(s[0])
         pic.append(s[1])
@@ -60,6 +68,13 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
     episode = params.initial_model
     n = params.robot_number
     # model.train()
+    pic_encoder = models.resnet18(pretrained=True)
+    for param in pic_encoder.parameters():
+        param.requires_grad = False
+    num_ftrs = pic_encoder.fc.in_features
+    pic_encoder.fc = Identity()
+    pic_encoder = pic_encoder.to(device)
+    
 
     # horizon loop
     for t in range(params.time_horizon):
@@ -75,26 +90,27 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
             av_reward = 0
             cum_reward = 0
             cum_done = 0
-            xdis = []
-            for i in range(n):
-                xdis.append(0)
             hx = torch.zeros((n, params.gruhiddensize)).unsqueeze(0).to(device)
 
             # n steps loops
             for step in range(params.num_steps):
                 state, pic = state_transfer(state_pic)
+                #print(pic.shape)
                 #state = Variable(torch.Tensor(state))
                 episode_length += 1
                 #state = state.reshape(n, 60)
+                pic = pic.to(device)
+                pic = pic_encoder(pic).unsqueeze(0)
+                #print(pic.shape) 1 8 512
                 shared_obs_stats.observes(state)
-                #state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
+                state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
                 states.append(state)
                 pictures.append(pic)
                 # print(hx.shape)
                 # print(state.shape)
                 model = model.to(device)
                 with torch.no_grad():
-                    mu, sigma, v, hx = model(state, pic, hx)
+                    mu, sigma, v, hx = model.single_forward(state, pic, hx)
                 # h.append(hx)
                 # c.append(cx)
                 # print(v.shape)
@@ -107,10 +123,6 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                 action = action.reshape(1, n * 16)
                 env_action = torch.tanh(action).data.squeeze().cpu().numpy()
                 state_pic, reward, done, _ = env.step(env_action)
-                if step % 128 == 0:
-                    for i in range(n):
-                        xdis[i] = state[60 * i + 48] - xdis[i]
-                        reward[i] += xdis[i] * 80
                 cum_reward += reward
                 # reward = max(min(reward, 1), -1)
                 rewards.append(reward)
@@ -127,7 +139,9 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                         state, pic = state_transfer(state_pic)
                         shared_obs_stats.observes(state)
                         state = shared_obs_stats.normalize(state).unsqueeze(0).to(device)
-                        _, _, v, _ = model(state, pic, hx)
+                        pic = pic.to(device)
+                        pic = pic_encoder(pic).unsqueeze(0)
+                        _, _, v, _ = model.single_forward(state, pic, hx)
                         values.append(v)
                     state_pic = env.reset()
                     break
@@ -149,6 +163,7 @@ def train(env, model, optimizer, shared_obs_stats, device, params):
                     R = A + values[i][0][j]
                     returns.insert(0, R)
                     st.insert(0, states[i][0][j].unsqueeze(0).unsqueeze(0))
+                    pics.insert(0, pictures[i][0][j].unsqueeze(0).unsqueeze(0))
                     ac.insert(0, actions[i][0][j].unsqueeze(0).unsqueeze(0))
                     lo.insert(0, logprobs[i][0][j].unsqueeze(0).unsqueeze(0))
                 # print(advantages[0].shape) torch.Size([1, 1])

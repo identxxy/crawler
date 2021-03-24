@@ -15,12 +15,9 @@ def weights_init_uniform(m):
 class acNetCell(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_size, gru_hidden_size, iso):
         super(acNetCell, self).__init__()
-        self.resnet18 = models.resnet18(pretrained=True)
-        for param in self.resnet18.parameters():
-            param.requires_grad = False
-        num_ftrs = self.resnet18().fc.in_features
-        self.resnet18().fc = nn.Linear(num_ftrs,100)
+        
         self.iso = iso
+        self.picnet = nn.Linear(512, 100)
         self.linear = nn.Linear(num_inputs, hidden_size[0])
         self.hidden = []
         for i in range(len(hidden_size) - 1):
@@ -38,15 +35,15 @@ class acNetCell(nn.Module):
         else:
             self.sigma_linear = nn.Linear(100, num_actions)
 
-    def forward(self, x, cam, hx):
+    def forward(self, x, p, hx):
 
-        p = self.resnet18(cam)
+        p = self.picnet(p)
         x = torch.tanh(self.linear(x))
 
         for layer in self.hidden:
             x = torch.tanh(layer(x))
 
-        x = torch.concat(x, p)
+        x = torch.cat((x, p),-1)
         x, hx = self.gru(x, hx)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)
@@ -56,15 +53,15 @@ class acNetCell(nn.Module):
             sigma = self.sigma_linear(actor)
         return mu, sigma, self.critic_linear(x)
 
-    def single_forward(self, x, hx):
+    def single_forward(self, x, p, hx):
+        
         x = torch.tanh(self.linear(x))
-        # print(hx.shape)
-        # print(x.shape)
-
+        p = self.picnet(p)
         for layer in self.hidden:
             # print(x)
             x = torch.tanh(layer(x))
 
+        x = torch.cat((x, p),-1)
         x, hx = self.gru(x, hx)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)

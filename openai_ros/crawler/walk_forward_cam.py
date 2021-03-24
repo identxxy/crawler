@@ -182,3 +182,25 @@ class WalkXTaskEnv_v1(WalkXCamTaskEnv):
             self.lastPos[0,i] = x
             self.lastPos[1,i] = y
         return rewards
+
+class WalkXTaskEnv_v2(WalkXTaskEnv_v1):
+    def __init__(self, **kwargs):
+        super(WalkXTaskEnv_v2, self).__init__(**kwargs)
+        self.reward_step = 0
+        self.xdis = np.zeros([self.n])
+
+    def _init_env_variables(self):
+        self.reward_step = 0
+        self.xdis = np.zeros([self.n])
+        WalkXTaskEnv_v1._init_env_variables(self)
+
+    def _compute_reward(self, observations, done):
+        self.reward_step += 1
+        rewards = WalkXTaskEnv_v1._compute_reward(self, observations, done)
+        if self.reward_step % 128 == 0:        
+            for i in range(self.n):
+                currentDis = self.robots[i].global_pos.position.x
+                rewards[i] += currentDis - self.xdis[i]
+                self.xdis[i] = currentDis
+        return rewards
+    

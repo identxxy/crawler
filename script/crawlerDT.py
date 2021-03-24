@@ -19,7 +19,7 @@ parser.add_argument('--num_steps',     type=int,   default=1024,    help='Input 
 parser.add_argument('--batch_size',     type=int,   default=1,    help='Batch size, number of speakers per batch');
 parser.add_argument('--fps', type=int,  default=1000,    help='fps');
 parser.add_argument('--nDataLoaderThread', type=int, default=5,     help='Number of loader threads');
-parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXEnv-v0", help='env_name');
+parser.add_argument('--env_name',      type=str,   default="CrawlerWalkXCamEnv-v2", help='env_name');
 
 ## Training details
 parser.add_argument('--save_interval',  type=int,   default=4,     help='Test and save every [test_interval] epochs');
@@ -65,8 +65,8 @@ def main():
     params.num_steps = rospy.get_param("/crawler/epoch_steps")
     device = torch.device('cuda', index=0) if torch.cuda.is_available() else torch.device('cpu')
     torch.manual_seed(params.seed)
-    num_inputs = int(env.observation_space.shape[0] / params.robot_number)
-    num_outputs = int(env.action_space.shape[0] / params.robot_number)
+    num_inputs = 60
+    num_outputs = 16
     model = acNetCell(num_inputs, num_outputs, params.hiddensize, params.gruhiddensize, params.iso_sig).to(device)
     shared_obs_stats = Shared_obs_stats(num_inputs, params.robot_number)
     optimizer = optim.Adam(model.parameters(), lr=params.lr, weight_decay = params.weight_decay)
