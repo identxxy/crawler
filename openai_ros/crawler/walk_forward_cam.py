@@ -27,7 +27,7 @@ def LoadYamlFileParamsTest(rospackage_name, rel_path_from_package_to_file, yaml_
 class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
     def __init__(self, **kwargs):
         # Load all the params first
-        LoadYamlFileParamsTest("crawler", "config", "walk_forwad_param.yaml")
+        LoadYamlFileParamsTest("crawler", "config", "walk_forward_param.yaml")
         # Variables that we retrieve through the param server, loded when launch training launch.
         self.reward_x_vel = rospy.get_param('/crawler/reward_x_vel')
         self.reward_y_vel = rospy.get_param('/crawler/reward_y_vel')
