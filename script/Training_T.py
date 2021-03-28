@@ -34,7 +34,7 @@ class ReplayMemory(object):
         # Events = list(zip(*events))
         # self.memory.append(map(lambda x: torch.cat([torch.repeat_interleave(torch.zeros_like(x[0]),(1000-len(x)),dim = 0),
         # torch.cat(x, 0)],0), events))
-        self.memory.append(map(lambda x: torch.cat(x, 0), events))
+        self.memory.append(map(lambda x: torch.cat(x, 0).detach(), events))
         self.load += len(events[1])
         self.batchsize += 1
         # if len(self.memory)>self.capacity:

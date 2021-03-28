@@ -17,15 +17,17 @@ class acNetCell(nn.Module):
         super(acNetCell, self).__init__()
         
         self.iso = iso
-        self.picnet = nn.Linear(512, 100)
+        self.picnet =nn.Sequential(nn.Linear(512, 100), nn.ReLU())
         self.linear = nn.Linear(num_inputs, hidden_size[0])
+        self.catlinear = nn.Linear(hidden_size[-1] + 100, 200)
+        
         self.hidden = []
         for i in range(len(hidden_size) - 1):
             self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i + 1]).cuda())
             # self.hidden.append(nn.BatchNorm1d(hidden_size[i + 1]))
             # self.hidden.append(nn.ReLU())
 
-        self.gru = nn.GRU(hidden_size[-1] + 100, gru_hidden_size, batch_first=False)
+        self.gru = nn.GRU(200, gru_hidden_size, batch_first=False)
         self.critic_linear = nn.Sequential(nn.Linear(gru_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
         self.actor_linear = nn.Linear(gru_hidden_size, 100)
         self.mu_linear = nn.Linear(100, num_actions)
@@ -42,8 +44,9 @@ class acNetCell(nn.Module):
 
         for layer in self.hidden:
             x = torch.tanh(layer(x))
-
+            
         x = torch.cat((x, p),-1)
+        x = torch.tanh(self.catlinear(x))
         x, hx = self.gru(x, hx)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)
@@ -57,11 +60,13 @@ class acNetCell(nn.Module):
         
         x = torch.tanh(self.linear(x))
         p = self.picnet(p)
+        
         for layer in self.hidden:
             # print(x)
             x = torch.tanh(layer(x))
 
         x = torch.cat((x, p),-1)
+        x = torch.tanh(self.catlinear(x))
         x, hx = self.gru(x, hx)
         actor = torch.tanh(self.actor_linear(x))
         mu = self.mu_linear(actor)
