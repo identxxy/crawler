@@ -200,7 +200,7 @@ class WalkXTaskEnv_v2(WalkXTaskEnv_v1):
         if self.reward_step % 128 == 0:        
             for i in range(self.n):
                 currentDis = self.robots[i].global_pos.position.x
-                rewards[i] += currentDis - self.xdis[i]
+                rewards[i] += 50*(currentDis - self.xdis[i])
                 self.xdis[i] = currentDis
         return rewards
     
