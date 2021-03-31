@@ -13,7 +13,7 @@ def weights_init_uniform(m):
 
 
 class acNetCell(nn.Module):
-    def __init__(self, num_inputs, num_actions, hidden_size, gru_hidden_size, iso):
+    def __init__(self, num_inputs, num_actions, hidden_size, gru_hidden_size, actor_size, iso):
         super(acNetCell, self).__init__()
         
         self.iso = iso
@@ -29,13 +29,13 @@ class acNetCell(nn.Module):
 
         self.gru = nn.GRU(200, gru_hidden_size, batch_first=False)
         self.critic_linear = nn.Sequential(nn.Linear(gru_hidden_size, 100), nn.ReLU(), nn.Linear(100, 1))
-        self.actor_linear = nn.Linear(gru_hidden_size, 100)
-        self.mu_linear = nn.Linear(100, num_actions)
+        self.actor_linear = nn.Linear(gru_hidden_size, actor_size)
+        self.mu_linear = nn.Linear(actor_size, num_actions)
 
         if self.iso:
             self.sigma_linear = torch.nn.Parameter(torch.zeros(1, num_actions))
         else:
-            self.sigma_linear = nn.Linear(100, num_actions)
+            self.sigma_linear = nn.Linear(gru_hidden_size, num_actions)
 
     def forward(self, x, p, hx):
 
@@ -53,7 +53,7 @@ class acNetCell(nn.Module):
         if self.iso:
             sigma = self.sigma_linear
         else:
-            sigma = self.sigma_linear(actor)
+            sigma = self.sigma_linear(x)
         return mu, sigma, self.critic_linear(x)
 
     def single_forward(self, x, p, hx):

@@ -47,3 +47,10 @@ register(
         kwargs={'n': 1, 
                 'displacement_xyz': [0, 10, 0]}
 )
+
+register(
+        id='CrawlerWalkXCamEnv-v3',
+        entry_point='crawler.walk_forward_cam:WalkXTaskEnv_v3',
+        kwargs={'n': 1, 
+                'displacement_xyz': [0, 10, 0]}
+)

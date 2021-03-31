@@ -112,15 +112,26 @@
                 </geometry>
             </visual>
             <collision>
-                <origin xyz="${L_up_con_leg/2} 0 0" rpy="0 ${pi/2} 0"/>
+                <origin xyz="${L_up_con_leg} 0 0" rpy="0 0 0"/>
                 <geometry>
-                    <cylinder length="${L_up_con_leg}" radius="${R_up_leg}"/>
+                    <sphere radius="${L_up_con_leg}"/>
                 </geometry>
             </collision>
         </link>
         <gazebo reference="leg3_${suffix}">
             <xacro:leg_friction_property/>
             <material>Gazebo/Grey</material>
+            <sensor name="main_bumper" type="contact">
+                <alwaysOn>true</alwaysOn>
+                <update_rate>20</update_rate>
+                <contact>
+                    <collision>leg3_${suffix}_collision</collision>
+                </contact>
+                <plugin name="gazebo_ros_bumper_controller" filename="libgazebo_ros_bumper.so">
+                    <bumperTopicName>contact_msgs</bumperTopicName>
+                    <frameName>knee_${suffix}</frameName>
+                </plugin>
+            </sensor>
         </gazebo>
 
         <joint name="joint4_${suffix}" type="revolute">
@@ -194,7 +205,7 @@
 
         <gazebo reference="foot_${suffix}">
             <xacro:foot_property/>
-            <material>Gazebo/Black</material>
+            <material>Gazebo/Black</material>         
         </gazebo>
 
     </xacro:macro>

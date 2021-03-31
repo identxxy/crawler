@@ -35,7 +35,7 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
         self.reward_height_k = rospy.get_param('/crawler/reward_height_k')
         self.reward_ori_k = rospy.get_param('/crawler/reward_ori_k')
 
-        self.punish_knee_thd = rospy.get_param('/crawler/punish_knee_thd')
+        # self.punish_knee_thd = rospy.get_param('/crawler/punish_knee_thd')
         self.punish_knee= rospy.get_param('/crawler/punish_knee')
 
         self.effort_penalty = rospy.get_param('/crawler/effort_penalty')
@@ -63,6 +63,7 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
         """
         self.steps = 0
         self.cmd = np.zeros(self.n * 16)
+        self.last_knee_land_cnt = np.zeros(self.n)
 
     def _set_action(self, action):
         """
@@ -138,13 +139,10 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
             if r.global_pos.position.z < self.reward_height_thd: # punishment
                 reward += self.reward_height_k * (r.global_pos.position.z - self.reward_height_thd)
             reward -= self.effort_penalty * sum(map(abs, r.joints.effort)) / self.effort_max
-            knee_land_cnt = 0
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_B', None).link_state.pose.position.z < self.punish_knee_thd
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_F', None).link_state.pose.position.z < self.punish_knee_thd
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_L', None).link_state.pose.position.z < self.punish_knee_thd
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt = r.knee_land_cnt - self.last_knee_land_cnt[i]
             reward -= knee_land_cnt * self.punish_knee
             rewards[i] = reward
+            self.last_knee_land_cnt[i] = r.knee_land_cnt
         return rewards
         
     # Internal TaskEnv Methods
@@ -172,13 +170,10 @@ class WalkXTaskEnv_v1(WalkXCamTaskEnv):
             if r.global_pos.position.z < self.reward_height_thd: # punishment
                 reward += self.reward_height_k * (r.global_pos.position.z - self.reward_height_thd)
             reward -= self.effort_penalty * sum(map(abs, r.joints.effort)) / self.effort_max
-            knee_land_cnt = 0
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_B', None).link_state.pose.position.z < self.punish_knee_thd
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_F', None).link_state.pose.position.z < self.punish_knee_thd
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_L', None).link_state.pose.position.z < self.punish_knee_thd
-            knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
+            knee_land_cnt = r.knee_land_cnt - self.last_knee_land_cnt[i]
             reward -= knee_land_cnt * self.punish_knee
             rewards[i] = reward
+            self.last_knee_land_cnt[i] = r.knee_land_cnt
             self.lastPos[0,i] = x
             self.lastPos[1,i] = y
         return rewards
@@ -200,7 +195,27 @@ class WalkXTaskEnv_v2(WalkXTaskEnv_v1):
         if self.reward_step % 128 == 0:        
             for i in range(self.n):
                 currentDis = self.robots[i].global_pos.position.x
-                rewards[i] += 50*(currentDis - self.xdis[i])
+                rewards[i] += 5*(currentDis - self.xdis[i])
                 self.xdis[i] = currentDis
         return rewards
     
+class WalkXTaskEnv_v3(WalkXCamTaskEnv):
+    def __init__(self, **kwargs):
+        super(WalkXTaskEnv_v3, self).__init__(**kwargs)
+        self.reward_step = 0
+        self.xdis = np.zeros([self.n])
+
+    def _init_env_variables(self):
+        self.reward_step = 0
+        self.xdis = np.zeros([self.n])
+        WalkXCamTaskEnv._init_env_variables(self)
+
+    def _compute_reward(self, observations, done):
+        self.reward_step += 1
+        rewards = WalkXCamTaskEnv._compute_reward(self, observations, done)
+        if self.reward_step % 128 == 0:        
+            for i in range(self.n):
+                currentDis = self.robots[i].global_pos.position.x
+                rewards[i] += 5*(currentDis - self.xdis[i])
+                self.xdis[i] = currentDis
+        return rewards

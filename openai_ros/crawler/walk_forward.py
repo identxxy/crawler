@@ -131,6 +131,8 @@ class WalkXTaskEnv(crawler_env.CrawlerRobotEnv):
             knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_L', None).link_state.pose.position.z < self.punish_knee_thd
             knee_land_cnt += self.get_link_state(r.ns[1:]+'::leg4_R', None).link_state.pose.position.z < self.punish_knee_thd
             reward -= knee_land_cnt * self.punish_knee
+            print("fuck1: ", self.get_link_state(r.ns[1:]+'::leg4_B', None).link_state.pose.position.z)
+            print("fuck2: ", r.global_pos.position.z)
             rewards[i] = reward
         return rewards
         

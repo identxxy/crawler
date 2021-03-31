@@ -18,7 +18,7 @@ class acNetCell(nn.Module):
         self.linear = nn.Linear(num_inputs, hidden_size[0])
         self.hidden = []
         for i in range(len(hidden_size) - 1):
-            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i + 1]))
+            self.hidden.append(nn.Linear(hidden_size[i], hidden_size[i + 1]).cuda())
             # self.hidden.append(nn.BatchNorm1d(hidden_size[i + 1]))
             # self.hidden.append(nn.ReLU())
 

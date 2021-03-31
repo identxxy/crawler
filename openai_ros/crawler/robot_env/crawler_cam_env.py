@@ -5,7 +5,7 @@ from gym.utils import seeding
 
 from std_msgs.msg import Float64
 from rosgraph_msgs.msg import Clock
-from gazebo_msgs.msg import ModelStates
+from gazebo_msgs.msg import ModelStates, ContactsState
 from sensor_msgs.msg import JointState, Image
 
 CAMERA_SIZE = 64 * 64
@@ -19,11 +19,13 @@ class Robot():
         # The joint_state_controller control no joint but pub the state of all joints
         self.joint_subscriber = rospy.Subscriber(self.ns + '/joint_states', JointState, self.joints_callback)
         self.global_subscriber = rospy.Subscriber('/gazebo/model_states', ModelStates, self.model_callback)
-        self.camera_subscriber = rospy.Subscriber(self.ns + 'camera/image_raw', Image, self.camera_callback)
+        self.camera_subscriber = rospy.Subscriber(self.ns + '/camera/image_raw', Image, self.camera_callback)
+        self.contact_subscriber = rospy.Subscriber(self.ns + '/contact_msgs', ContactsState, self.contact_callback)
         self.joints = None
         self.global_pos = None
         self.global_vel = None
         self.model_index = None
+        self.knee_land_cnt = 0
         self.roll = 0
         self.pitch = 0
         self.yaw = 0
@@ -39,6 +41,11 @@ class Robot():
     def camera_callback(self, data):
         if self.model_index:
             self.camera = data
+
+    def contact_callback(self, data):
+        if self.model_index:
+            self.knee_land_cnt += len(data.states)
+
 
     def joints_callback(self, data):
         self.joints = data
@@ -117,6 +124,12 @@ class CrawlerRobotEnv(robot_gazebo_env.RobotGazeboEnv):
                         r.ns + '/camera/image_raw', Image, timeout=3.0)
                 except rospy.exceptions.ROSException:
                     rospy.logerr("image not ready.")
+                try:
+                    r.knee_land_cnt = 0
+                    rospy.wait_for_message(
+                        r.ns + '/contact_msgs', ContactsState, timeout=3.0)
+                except rospy.exceptions.ROSException:
+                    rospy.logerr("contact not ready.")
 
         # rospy.logdebug("ALL SYSTEMS READY")
         return True
