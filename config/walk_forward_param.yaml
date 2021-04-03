@@ -2,12 +2,12 @@ crawler: #namespace
 
     #environment variables
     reward_x_vel: 10 
-    reward_y_vel: -2
-    reward_height_thd: 0.45
+    reward_y_vel: -1
+    reward_height_thd: 0.2
     reward_height_k: 10
     reward_ori_k: 1
 
-    punish_knee: 0.02
+    punish_knee: 0.04
     punish_knee_thd: 0.05
 
     effort_penalty: 0.005    # penalty on effort

@@ -134,7 +134,7 @@ class WalkXCamTaskEnv(crawler_cam_env.CrawlerRobotEnv):
         rewards = np.zeros(self.n, dtype=float)
         for i in range(self.n):
             r = self.robots[i]
-            reward = r.global_vel.linear.x * self.reward_x_vel + r.global_vel.linear.y * self.reward_y_vel
+            reward = r.global_vel.linear.x * self.reward_x_vel + abs(r.global_vel.linear.y) * self.reward_y_vel
             reward -= self.reward_ori_k * ( 1 - math.cos(r.roll) * math.cos(r.pitch) )
             if r.global_pos.position.z < self.reward_height_thd: # punishment
                 reward += self.reward_height_k * (r.global_pos.position.z - self.reward_height_thd)
@@ -215,7 +215,9 @@ class WalkXTaskEnv_v3(WalkXCamTaskEnv):
         rewards = WalkXCamTaskEnv._compute_reward(self, observations, done)
         if self.reward_step % 128 == 0:        
             for i in range(self.n):
-                currentDis = self.robots[i].global_pos.position.x
-                rewards[i] += 5*(currentDis - self.xdis[i])
-                self.xdis[i] = currentDis
+                #currentDis = self.robots[i].global_pos.position.x
+                #rewards[i] += 10*(currentDis - self.xdis[i])
+                #self.xdis[i] = currentDis
+                self.xdis[i] = self.robots[i].global_pos.position.x - self.xdis[i]
+                rewards[i] += 20 * self.xdis[i]
         return rewards
