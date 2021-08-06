@@ -28,6 +28,7 @@ Then run the training script in the `script` dir.
 `python crawlerD.py --mode="train"`
 
 To run the previously trained weight:
+
 `python crawlerD.py --mode="demo"`
 
 For testing: 
