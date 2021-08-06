@@ -22,7 +22,7 @@ Clone the repo and move it to `~/catkin_ws/src`. Then run `catkin_make` at `~/ca
 # Usage
 
 Firstly, run the simulation, cmd in `[]` is optional  
-`roslaunch crawler world.launch [gui:=false]`
+`roslaunch crawler main.launch [gui:=true]`
 
 Then run the training script in the `script` dir.  
-`python crawlerD.py`
+`python crawlerD.py --mode="train"`
